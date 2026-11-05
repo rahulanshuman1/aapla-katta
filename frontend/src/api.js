@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '') + '/api';
+const BASE = (import.meta.env.VITE_API_URL || 'https://aapla-katta.onrender.com').replace(/\/$/, '') + '/api';
 
 export const getToken = () => localStorage.getItem('ak_token');
 export const setToken = (t) => (t ? localStorage.setItem('ak_token', t) : localStorage.removeItem('ak_token'));
