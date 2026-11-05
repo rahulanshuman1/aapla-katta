@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
 const fromName = () => process.env.MAIL_FROM_NAME || 'Aapla Katta';
-const fromEmail = () => process.env.MAIL_FROM_EMAIL || process.env.SMTP_USER || 'no-reply@example.com';
+const fromEmail = () => process.env.MAIL_FROM_EMAIL || process.env.SMTP_USER || 'rahulanshuman00@gmail.com';
 
 let smtp;
 function smtpTransport() {
