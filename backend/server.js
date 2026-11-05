@@ -11,7 +11,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 
-const origins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map((s) => s.trim().replace(/\/$/, ''));
+const origins = (process.env.CLIENT_URL || 'https://aapla-katta.vercel.app').split(',').map((s) => s.trim().replace(/\/$/, ''));
 app.use(cors({
   origin: (origin, cb) => (!origin || origins.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'))),
 }));
