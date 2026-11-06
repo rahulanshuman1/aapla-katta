@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../../store';
+import { api } from '../../api';
 import { CONTENT } from '../../defaultContent';
 
 /** Edit every website text from one screen. */
@@ -47,6 +48,12 @@ export function AdminBusiness() {
   const [contact, setContact] = useState(settings.contact);
   const [charges, setCharges] = useState(settings.charges);
   const [busy, setBusy] = useState(false);
+  const [mail, setMail] = useState(null);
+
+  const testEmail = async () => {
+    setMail({ loading: true });
+    try { setMail(await api.post('/settings/test-email', {})); } catch (e) { setMail({ ok: false, error: e.message }); }
+  };
 
   const save = async () => {
     setBusy(true);
@@ -86,6 +93,14 @@ export function AdminBusiness() {
           <label className="check"><input type="checkbox" checked={charges.acceptingOrders} onChange={(e) => setCharges({ ...charges, acceptingOrders: e.target.checked })} /> Accepting online orders</label>
           <label className="check"><input type="checkbox" checked={charges.enableCOD} onChange={(e) => setCharges({ ...charges, enableCOD: e.target.checked })} /> Allow “pay at restaurant / on delivery”</label>
         </div>
+      </section>
+      <section className="card" style={{ marginTop: 16 }}>
+        <h3>📧 Email check</h3>
+        <p className="muted">Sends a test email to your admin address so you can confirm customers will receive verification, welcome and order emails.</p>
+        <button className="btn btn-outline btn-sm" onClick={testEmail} disabled={mail?.loading}>{mail?.loading ? 'Sending…' : 'Send test email to me'}</button>
+        {mail && !mail.loading && (mail.ok
+          ? <p className="alert ok">✅ Sent via {mail.provider}. Check your inbox (and spam).</p>
+          : <p className="alert err">❌ Email is NOT working{mail.provider ? ` (provider: ${mail.provider})` : ''}: {mail.error}</p>)}
       </section>
       <div className="sticky-save"><button className="btn btn-primary btn-lg" disabled={busy} onClick={save}>{busy ? 'Saving…' : '💾 Save settings'}</button></div>
     </div>

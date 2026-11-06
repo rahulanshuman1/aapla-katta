@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, getToken, setToken } from './api';
 import { CONTENT } from './defaultContent';
 import { THEMES } from './themes';
@@ -7,7 +7,7 @@ const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
 const FALLBACK_SETTINGS = {
-  brand: { name: 'Aapla Katta', marathiName: 'आपला कट्टा', prefix: 'वेंगुर्लेकरांचा', tagline: 'Good Mood Food', subtitle: 'Family Restaurant', logoUrl: '', heroImage: '' },
+  brand: { name: 'Aapla Katta', marathiName: 'आपला कट्टा', prefix: 'वेंगुर्लेकरांचा', tagline: 'Good Mood Food', subtitle: 'Family Restaurant', logoUrl: '', heroImage: '', footerImage: '' },
   theme: { preset: 'classic', colors: THEMES.classic.colors, banner: { enabled: false, text: '' }, effect: 'none' },
   contact: { phone: '+91 9763691996', whatsapp: '919763691996', email: '', address: 'Gawade Colony, Bhoir Colony, Chinchwad, Pune 411033', mapUrl: '', hours: 'Open daily · Closes 11 pm', instagram: 'aapla.katta_gmf' },
   charges: { gstPercent: 0, deliveryFee: 0, minOrder: 0, acceptingOrders: true, enableCOD: true },
@@ -17,10 +17,12 @@ const FALLBACK_SETTINGS = {
 const loadCart = () => { try { return JSON.parse(localStorage.getItem('ak_cart')) || []; } catch { return []; } };
 
 export function AppProvider({ children }) {
-  const [settings, setSettings] = useState(FALLBACK_SETTINGS);
+  const [savedSettings, setSavedSettings] = useState(FALLBACK_SETTINGS);
+  const [draft, setDraft] = useState(null);          // unsaved appearance changes {theme, brand} – applied site-wide as a preview
+  const [previewing, setPreviewing] = useState(false);
+  const previewRef = useRef(false);
   const [meta, setMeta] = useState({ razorpayEnabled: false, razorpayKeyId: '' });
   const [ready, setReady] = useState(false);
-  const [themeOverride, setThemeOverride] = useState(null); // live preview while admin edits
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(!getToken());
   const [cart, setCart] = useState(loadCart);
@@ -39,7 +41,7 @@ export function AppProvider({ children }) {
   const refreshSettings = useCallback(async () => {
     try {
       const d = await api.get('/settings');
-      setSettings(d.settings);
+      setSavedSettings(d.settings);
       setMeta(d.meta);
     } catch { /* keep fallback so the site still renders */ }
     setReady(true);
@@ -48,9 +50,17 @@ export function AppProvider({ children }) {
 
   const saveSettings = useCallback(async (patch) => {
     const d = await api.put('/settings', patch);
-    setSettings(d.settings);
+    setSavedSettings(d.settings);
     return d.settings;
   }, []);
+
+  // What the whole site renders: saved settings, with any unsaved appearance draft laid on top (preview)
+  const settings = useMemo(
+    () => (draft ? { ...savedSettings, theme: draft.theme, brand: { ...savedSettings.brand, ...draft.brand } } : savedSettings),
+    [savedSettings, draft]
+  );
+  const startPreview = useCallback(() => { previewRef.current = true; setPreviewing(true); }, []);
+  const endPreview = useCallback(() => { previewRef.current = false; setPreviewing(false); }, []);
 
   const saveContent = useCallback(async (patch) => {
     try {
@@ -60,7 +70,7 @@ export function AppProvider({ children }) {
   }, [saveSettings, toast]);
 
   // ---- theme -> CSS variables ----
-  const activeTheme = themeOverride || settings.theme;
+  const activeTheme = settings.theme;
   useEffect(() => {
     const c = activeTheme.colors;
     const r = document.documentElement.style;
@@ -112,12 +122,12 @@ export function AppProvider({ children }) {
   const text = useCallback((k) => content[k] ?? CONTENT[k]?.text ?? '', [content]);
 
   const value = useMemo(() => ({
-    settings, meta, ready, activeTheme, setThemeOverride, refreshSettings, saveSettings, saveContent, text,
+    settings, savedSettings, meta, ready, activeTheme, draft, setDraft, previewing, previewRef, startPreview, endPreview, refreshSettings, saveSettings, saveContent, text,
     user, authReady, setAuth, logout, isAdmin: user?.role === 'admin',
     menu, loadMenu, setMenu,
     cart, addToCart, changeQty, clearCart, cartCount, cartTotal, cartOpen, setCartOpen,
     editMode, setEditMode, toast, toasts,
-  }), [settings, meta, ready, activeTheme, refreshSettings, saveSettings, saveContent, text, user, authReady, setAuth, logout,
+  }), [settings, savedSettings, meta, ready, activeTheme, draft, previewing, startPreview, endPreview, refreshSettings, saveSettings, saveContent, text, user, authReady, setAuth, logout,
     menu, loadMenu, cart, addToCart, changeQty, clearCart, cartCount, cartTotal, cartOpen, editMode, toast, toasts]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

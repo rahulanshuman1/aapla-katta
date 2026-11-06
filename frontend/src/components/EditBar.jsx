@@ -4,8 +4,8 @@ import { useApp } from '../store';
 
 // Floating admin toolbar: shown to admins on public pages.
 export default function EditBar() {
-  const { isAdmin, editMode, setEditMode } = useApp();
-  if (!isAdmin) return null;
+  const { isAdmin, editMode, setEditMode, previewing, draft } = useApp();
+  if (!isAdmin || (previewing && draft)) return null;
   return (
     <AnimatePresence>
       <motion.div className="editbar" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>

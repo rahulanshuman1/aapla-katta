@@ -12,6 +12,14 @@ const razorpay = () => {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) return null;
   return (rzp ||= new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET }));
 };
+
+// Sends the order emails in the background (never makes the customer wait) and guarantees only one send per order.
+function notifyOrder(order) {
+  Order.findOneAndUpdate({ _id: order._id, emailsSent: { $ne: true } }, { emailsSent: true }, { new: true })
+    .then((claimed) => claimed && sendOrderEmails(claimed))
+    .catch((e) => console.error('[order-email] failed:', e.message));
+}
+
 const orderNo = () => 'AK' + Date.now().toString(36).toUpperCase().slice(-6) + crypto.randomInt(10, 99);
 
 async function createGatewayOrder(order) {
@@ -67,8 +75,7 @@ router.post('/', protect, async (req, res) => {
     });
 
     if (paymentMethod === 'cod') {
-      await sendOrderEmails(order);
-      order.emailsSent = true; await order.save();
+      notifyOrder(order);
       return res.status(201).json({ order });
     }
     res.status(201).json({ order, payment: await createGatewayOrder(order) });
@@ -101,10 +108,7 @@ router.post('/verify-payment', protect, async (req, res) => {
     order.paymentStatus = 'paid'; order.status = 'placed'; order.razorpayPaymentId = razorpay_payment_id;
     await order.save();
   }
-  if (!order.emailsSent) {
-    await sendOrderEmails(order);
-    order.emailsSent = true; await order.save();
-  }
+  notifyOrder(order); // background – the response must not wait for email
   res.json({ order });
 });
 

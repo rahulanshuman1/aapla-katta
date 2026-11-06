@@ -16,8 +16,10 @@ const TABS = [
 
 export default function Admin() {
   const [tab, setTab] = useState(() => sessionStorage.getItem('ak_admin_tab') || 'orders');
-  const { setEditMode } = useApp();
+  const { setEditMode, setDraft, endPreview } = useApp();
   useEffect(() => { sessionStorage.setItem('ak_admin_tab', tab); }, [tab]);
+  // Back from a site preview: stop preview mode. Unsaved changes only survive on the Theme & logo tab.
+  useEffect(() => { endPreview(); if (tab !== 'appearance') setDraft(null); }, [tab]); // eslint-disable-line
   useEffect(() => () => setEditMode(false), [setEditMode]);
 
   return (

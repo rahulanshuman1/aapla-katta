@@ -190,11 +190,17 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
 
 /* ---------- footer / toasts / editbar ---------- */
 .footer { background: #1f1511; color: #e9ddd2; padding: 50px 0 0; margin-top: 0; } .footer a, .footer span { color: #e9ddd2; display: block; margin-bottom: 8px; font-size: .92rem; } .footer a:hover { color: var(--secondary); } .footer h4 { color: var(--secondary); font-family: var(--font); letter-spacing: 1px; text-transform: uppercase; font-size: .82rem; }
+.footer.has-bg { background: linear-gradient(rgba(31, 21, 17, .86), rgba(31, 21, 17, .94)), var(--footer-img) center / cover no-repeat; }
 .footer-grid { display: grid; grid-template-columns: 1.3fr 1fr 1.4fr; gap: 30px; } .footer-tag { color: var(--secondary); margin: 10px 0 4px; } .footer-muted { opacity: .7; font-size: .88rem; }
 .footer-bottom { text-align: center; padding: 18px; margin-top: 30px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: .82rem; opacity: .7; }
 .toasts { position: fixed; top: 84px; right: 16px; z-index: 300; display: grid; gap: 8px; } .toast { background: #1f1511; color: #fff; padding: 11px 18px; border-radius: 12px; box-shadow: var(--shadow-lg); font-size: .9rem; max-width: 320px; } .toast.err { background: #b3261e; }
 .editbar { position: fixed; right: 16px; bottom: 16px; z-index: 80; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; } .editbar .btn { box-shadow: var(--shadow-lg); }
 .editable { outline: 2px dashed var(--secondary); outline-offset: 4px; border-radius: 4px; cursor: text; min-width: 20px; display: inline-block; } .editable:focus { outline: 2px solid var(--primary); background: color-mix(in srgb, var(--secondary) 15%, transparent); } h1.editable, h2.editable, h3.editable, p.editable { display: block; }
+
+/* ---------- preview bar ---------- */
+.previewbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 250; width: min(760px, calc(100% - 24px)); display: flex; align-items: center; justify-content: space-between; gap: 12px 18px; flex-wrap: wrap; background: #1f1511; color: #fff; padding: 12px 18px; border-radius: 18px; box-shadow: var(--shadow-lg); border: 2px solid var(--secondary); }
+.previewbar-msg { display: flex; flex-direction: column; font-size: .8rem; opacity: .95; } .previewbar-msg b { font-size: .95rem; }
+.btn-outline-light { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); } .btn-outline-light:hover:not(:disabled) { background: rgba(255, 255, 255, .15); }
 
 /* ---------- admin ---------- */
 .admin { padding: 30px 0 100px; } .admin-head h1 { font-size: 2rem; margin-bottom: 4px; }
@@ -214,6 +220,8 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 16px 0 22px; } .theme-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; border-radius: 16px; border: 2px solid var(--border); background: var(--surface); cursor: pointer; font: 500 .8rem var(--font); color: var(--text); transition: transform .2s, border .2s; } .theme-card:hover { transform: translateY(-3px); } .theme-card.on { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent); } .theme-emoji { font-size: 2rem; } .swatches { display: flex; } .swatches i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; margin-left: -5px; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
 .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 16px; margin-top: 12px; } .color-field { display: flex; align-items: center; gap: 12px; } .color-field small { display: block; color: var(--muted); }
 .logo-preview { display: grid; place-items: center; padding: 26px; border-radius: 16px; background: var(--bg); border: 1px dashed var(--border); margin-bottom: 14px; }
+.sticky-save { gap: 10px; flex-wrap: wrap; align-items: center; } .dirty-note { align-self: center; background: #fff1d6; color: #9a5b00; padding: 6px 14px; border-radius: 999px; font-size: .82rem; font-weight: 600; }
+.footer-thumb { width: 120px; height: 64px; object-fit: cover; border-radius: 12px; }
 .sticky-save { position: sticky; bottom: 16px; display: flex; justify-content: center; padding-top: 14px; z-index: 20; } .sticky-save .btn { box-shadow: var(--shadow-lg); }
 
 /* ---------- responsive ---------- */

@@ -7,7 +7,7 @@ export default function Footer() {
   const { settings } = useApp();
   const { contact, brand } = settings;
   return (
-    <footer className="footer">
+    <footer className={`footer ${brand.footerImage ? 'has-bg' : ''}`} style={brand.footerImage ? { '--footer-img': `url("${brand.footerImage}")` } : undefined}>
       <div className="container footer-grid">
         <div>
           <AnimatedLogo variant="compact" animateIn={false} />

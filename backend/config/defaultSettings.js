@@ -8,6 +8,7 @@ module.exports = {
     subtitle: 'Family Restaurant',
     logoUrl: '',      // admin-uploaded logo (data URL). Empty = built-in animated logo
     heroImage: '',    // optional admin-uploaded hero photo
+    footerImage: '',  // optional admin-uploaded footer background photo
   },
   theme: {
     preset: 'classic',

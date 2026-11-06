@@ -15,10 +15,12 @@ function loadRazorpay() {
   });
 }
 
-/** Opens Razorpay Checkout. Resolves with the verified order, rejects on dismiss/failure. */
+/** Opens Razorpay Checkout. Resolves with the verified order, rejects on dismiss / verification problems. */
 export async function payWithRazorpay({ payment, order, user, settings }) {
   if (!(await loadRazorpay())) throw new Error('Could not load the payment window. Check your internet connection.');
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const done = (fn, v) => { if (!settled) { settled = true; fn(v); } };
     const rz = new window.Razorpay({
       key: payment.keyId,
       amount: payment.amount,
@@ -29,15 +31,19 @@ export async function payWithRazorpay({ payment, order, user, settings }) {
       prefill: { name: user.name, email: user.email, contact: order.phone },
       notes: { orderNo: order.orderNo },
       theme: { color: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#C8102E' },
-      modal: { ondismiss: () => reject(Object.assign(new Error('Payment cancelled'), { dismissed: true })) },
+      modal: { ondismiss: () => done(reject, Object.assign(new Error('Payment cancelled'), { dismissed: true })) },
       handler: async (resp) => {
         try {
           const d = await api.post('/orders/verify-payment', resp);
-          resolve(d.order);
-        } catch (e) { reject(e); }
+          done(resolve, d.order);
+        } catch (e) {
+          // The customer HAS paid – never leave them on a spinner, send them to My Orders instead
+          done(reject, Object.assign(new Error('Payment received! Your confirmation is taking a little longer – please check My Orders in a minute.'), { paid: true }));
+        }
       },
     });
-    rz.on('payment.failed', (r) => reject(new Error(r.error?.description || 'Payment failed')));
+    // A failed attempt is not final: Razorpay lets the customer retry inside the same window,
+    // so we only react to success (handler) or to the window being closed (ondismiss).
     rz.open();
   });
 }
@@ -49,33 +55,38 @@ export default function Checkout() {
   const [f, setF] = useState({ phone: user.phone || '', orderType: 'dine-in', tableNo: '', address: user.address || '', notes: '', paymentMethod: meta.razorpayEnabled ? 'online' : 'cod' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [snap, setSnap] = useState(null); // frozen copy of the cart once the order is placed (cart itself is cleared)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  const gst = Math.round((cartTotal * ch.gstPercent) / 100);
+  const lines = snap ? snap.lines : cart;
+  const subtotal = snap ? snap.subtotal : cartTotal;
+  const gst = Math.round((subtotal * ch.gstPercent) / 100);
   const delivery = f.orderType === 'delivery' ? Number(ch.deliveryFee) || 0 : 0;
-  const total = cartTotal + gst + delivery;
+  const total = subtotal + gst + delivery;
 
-  if (!cart.length) {
+  if (!cart.length && !snap) {
     return <div className="container narrow center page-pad"><div className="empty-emoji">🛒</div><h2>Your cart is empty</h2><Link to="/menu" className="btn btn-primary" style={{ marginTop: 16 }}>Browse the menu</Link></div>;
   }
 
   const submit = async (e) => {
     e.preventDefault();
+    if (busy) return;
     setErr('');
     if (cartTotal < ch.minOrder) return setErr(`Minimum order value is ${inr(ch.minOrder)}`);
     setBusy(true);
     try {
       const d = await api.post('/orders', { ...f, items: cart.map((l) => ({ itemId: l.itemId, variant: l.variant, qty: l.qty })) });
+      // The order now exists on the server – empty the cart right away so it can never be re-submitted or left behind
+      setSnap({ lines: cart, subtotal: cartTotal });
+      clearCart();
       if (f.paymentMethod === 'online') {
         try {
           await payWithRazorpay({ payment: d.payment, order: d.order, user, settings });
         } catch (pe) {
-          clearCart();
-          toast(pe.dismissed ? 'Payment not completed. You can retry from My Orders.' : pe.message, 'err');
+          toast(pe.dismissed ? 'Payment not completed. You can finish it from My Orders.' : pe.message, pe.paid ? 'ok' : 'err');
           return nav('/orders');
         }
       }
-      clearCart();
       nav('/orders', { state: { placed: d.order.orderNo } });
     } catch (e2) {
       setErr(e2.message);
@@ -118,17 +129,17 @@ export default function Checkout() {
 
         <motion.div className="card summary" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <h3>Summary</h3>
-          {cart.map((l) => (
+          {lines.map((l) => (
             <div key={l.key} className="sum-line">
               <span>{l.name}{l.variant && <small> ({l.variant})</small>}</span>
               <div className="stepper stepper-sm">
-                <button type="button" onClick={() => changeQty(l.key, -1)}>−</button><span>{l.qty}</span><button type="button" onClick={() => changeQty(l.key, 1)}>+</button>
+                <button type="button" disabled={!!snap} onClick={() => changeQty(l.key, -1)}>−</button><span>{l.qty}</span><button type="button" disabled={!!snap} onClick={() => changeQty(l.key, 1)}>+</button>
               </div>
               <b>{inr(l.price * l.qty)}</b>
             </div>
           ))}
           <hr />
-          <div className="row"><span>Subtotal</span><span>{inr(cartTotal)}</span></div>
+          <div className="row"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
           {gst > 0 && <div className="row"><span>GST ({ch.gstPercent}%)</span><span>{inr(gst)}</span></div>}
           {delivery > 0 && <div className="row"><span>Delivery fee</span><span>{inr(delivery)}</span></div>}
           <div className="row total"><span>Total</span><span>{inr(total)}</span></div>

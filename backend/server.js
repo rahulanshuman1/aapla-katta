@@ -15,7 +15,7 @@ const origins = (process.env.CLIENT_URL || 'https://aapla-katta.vercel.app').spl
 app.use(cors({
   origin: (origin, cb) => (!origin || origins.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'))),
 }));
-app.use(express.json({ limit: '5mb' })); // logos / item photos are sent as compressed data URLs
+app.use(express.json({ limit: '12mb' })); // logo / hero / footer / item photos are sent as compressed data URLs
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 app.use('/api/auth', require('./routes/auth'));

@@ -9,6 +9,7 @@ import FestivalFX from './components/FestivalFX';
 import Splash from './components/Splash';
 import Toasts from './components/Toasts';
 import EditBar from './components/EditBar';
+import PreviewBar from './components/PreviewBar';
 import Home from './pages/Home';
 import MenuPage from './pages/MenuPage';
 import Checkout from './pages/Checkout';
@@ -64,6 +65,7 @@ export default function App() {
       {!isAdminPage && <Footer />}
       <CartDrawer />
       <EditBar />
+      <PreviewBar />
       <Toasts />
     </>
   );

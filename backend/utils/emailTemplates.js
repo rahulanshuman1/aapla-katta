@@ -109,7 +109,9 @@ async function sendOrderEmails(order) {
       `<p><b>${esc(order.customerName)}</b> · ${esc(order.phone)} · ${esc(order.customerEmail)}</p>${orderTable(s, order)}${meta}
        ${button(s, base + '/admin', 'Open admin panel')}`),
   });
-  await Promise.all([customer, admin]);
+  const [c, a] = await Promise.all([customer, admin]);
+  console.log(`[order ${order.orderNo}] emails -> customer: ${c ? 'sent' : 'FAILED'}, owner: ${a ? 'sent' : 'FAILED'}`);
+  return { customer: c, admin: a };
 }
 
 async function sendStatusEmail(order) {
