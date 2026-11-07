@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api, inr } from '../api';
 import MapView from '../components/MapView';
+import useRoute from '../useRoute';
+import { useApp } from '../store';
 
 export const DELIVERY_STEPS = ['placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery', 'completed'];
 export const DELIVERY_LABEL = { placed: 'Order placed', confirmed: 'Confirmed', preparing: 'Preparing', ready: 'Packed', 'out-for-delivery': 'On the way', completed: 'Delivered' };
@@ -24,6 +26,10 @@ export default function Track() {
   const [input, setInput] = useState('');
   const [now, setNow] = useState(Date.now());
   const statusRef = useRef('');
+  const { settings } = useApp();
+  const origin = Number.isFinite(parseFloat(settings.contact?.lat)) && Number.isFinite(parseFloat(settings.contact?.lng)) ? { lat: parseFloat(settings.contact.lat), lng: parseFloat(settings.contact.lng) } : null;
+  const roadFrom = t?.location || (t && t.status !== 'completed' && t.status !== 'cancelled' ? origin : null);
+  const road = useRoute(roadFrom, t?.destination || null);
 
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
 
@@ -72,8 +78,8 @@ export default function Track() {
   const onRoad = t.status === 'out-for-delivery';
   const delivered = t.status === 'completed';
   const loc = t.location;
-  const dist = loc && t.destination ? km(loc, t.destination) : null;
-  const eta = dist != null ? Math.max(1, Math.round((dist / 18) * 60)) : null; // assume ~18 km/h city riding
+  const dist = road && loc ? road.km : loc && t.destination ? km(loc, t.destination) : null;
+  const eta = road && loc ? road.minutes : dist != null ? Math.max(1, Math.round((dist / 18) * 60)) : null; // road ETA via OSRM, else ~18 km/h straight-line
   const stale = loc && loc.at ? now - new Date(loc.at).getTime() : 0;
 
   return (
@@ -94,15 +100,22 @@ export default function Track() {
 
       {onRoad && (
         <div className="card map-card">
-          {loc ? <MapView rider={loc} dest={t.destination} height={340} /> : (
+          {loc ? <MapView rider={loc} dest={t.destination} origin={origin} route={road?.coords} height={340} /> : (
             <div className="map-wait"><div className="spinner" /><p>Waiting for your delivery partner's live location…</p></div>
           )}
           {loc && (
             <div className="eta-row">
-              {eta != null ? <div><b>≈ {eta} min</b><small>{dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`} away (approx.)</small></div> : <div><b>Live location</b><small>Pin your address at checkout next time to see the ETA</small></div>}
+              {eta != null ? <div><b>≈ {eta} min</b><small>{dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`} away{road ? '' : ' (approx.)'}</small></div> : <div><b>Live location</b><small>Pin your address at checkout next time to see the ETA</small></div>}
               <small className={stale > 60000 ? 'warn' : 'muted'}>● Updated {ago(stale)}</small>
             </div>
           )}
+        </div>
+      )}
+
+      {!onRoad && !delivered && !cancelled && road && t.destination && (
+        <div className="card map-card">
+          <MapView dest={t.destination} origin={origin} route={road.coords} height={260} />
+          <div className="eta-row"><div><b>≈ {road.minutes} min</b><small>{road.km.toFixed(1)} km from the restaurant to you</small></div><small className="muted">Estimated delivery ride</small></div>
         </div>
       )}
 

@@ -80,6 +80,11 @@ export function AdminBusiness() {
         <label>Address<textarea rows={2} {...c('address')} /></label>
         <label>Opening hours text<input {...c('hours')} /></label>
         <label>Google Maps link<input {...c('mapUrl')} placeholder="https://maps.google.com/?q=..." /></label>
+        <div className="form-grid">
+          <label>Restaurant latitude (for delivery routes)<input {...c('lat')} placeholder="18.6298" inputMode="decimal" /></label>
+          <label>Restaurant longitude<input {...c('lng')} placeholder="73.7997" inputMode="decimal" /></label>
+        </div>
+        <small className="muted">Tip: on Google Maps long-press your restaurant, then copy the two numbers shown (latitude, longitude).</small>
       </section>
 
       <section className="card">

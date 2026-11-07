@@ -9,7 +9,7 @@ export const useApp = () => useContext(Ctx);
 const FALLBACK_SETTINGS = {
   brand: { name: 'Aapla Katta', marathiName: 'आपला कट्टा', prefix: 'वेंगुर्लेकरांचा', tagline: 'Good Mood Food', subtitle: 'Family Restaurant', logoUrl: '', heroImage: '', footerImage: '' },
   theme: { preset: 'classic', colors: THEMES.classic.colors, banner: { enabled: false, text: '' }, effect: 'none' },
-  contact: { phone: '+91 9763691996', whatsapp: '919763691996', email: '', address: 'Gawade Colony, Bhoir Colony, Chinchwad, Pune 411033', mapUrl: '', hours: 'Open daily · Closes 11 pm', instagram: 'aapla.katta_gmf' },
+  contact: { phone: '+91 9763691996', whatsapp: '919763691996', email: '', address: 'Gawade Colony, Bhoir Colony, Chinchwad, Pune 411033', mapUrl: '', hours: 'Open daily · Closes 11 pm', instagram: 'aapla.katta_gmf', lat: '18.6298', lng: '73.7997' },
   charges: { gstPercent: 0, deliveryFee: 0, minOrder: 0, acceptingOrders: true, enableCOD: true },
   content: {},
 };

@@ -5,6 +5,7 @@ import { api, inr } from '../api';
 import { useApp } from '../store';
 import { payWithRazorpay } from './Checkout';
 import MapView from '../components/MapView';
+import useRoute from '../useRoute';
 
 function km(a, b) {
   const R = 6371, rad = (x) => (x * Math.PI) / 180;
@@ -15,18 +16,19 @@ const ago = (ms) => (ms < 5000 ? 'just now' : ms < 60000 ? `${Math.round(ms / 10
 const ll = (p) => (p && Number.isFinite(p.lat) && Number.isFinite(p.lng) ? { lat: p.lat, lng: p.lng } : null);
 
 // Live map shown inside the order card while the order is on its way
-function LiveMap({ o, now }) {
+function LiveMap({ o, now, origin }) {
   const rider = ll(o.delivery?.location);
   const dest = ll(o.deliveryLocation);
+  const road = useRoute(rider, dest);
   if (!rider) return <div className="map-wait"><div className="spinner" /><p>Waiting for your delivery partner's live location…</p></div>;
-  const dist = dest ? km(rider, dest) : null;
-  const eta = dist != null ? Math.max(1, Math.round((dist / 18) * 60)) : null;
+  const dist = road ? road.km : dest ? km(rider, dest) : null;
+  const eta = road ? road.minutes : dist != null ? Math.max(1, Math.round((dist / 18) * 60)) : null;
   const stale = o.delivery.location.at ? now - new Date(o.delivery.location.at).getTime() : 0;
   return (
     <div className="map-card" style={{ marginTop: 12 }}>
-      <MapView rider={rider} dest={dest} height={280} />
+      <MapView rider={rider} dest={dest} origin={origin} route={road?.coords} height={280} />
       <div className="eta-row">
-        {eta != null ? <div><b>≈ {eta} min</b><small>{dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`} away (approx.)</small></div> : <div><b>Live location</b><small>Your delivery partner's position</small></div>}
+        {eta != null ? <div><b>≈ {eta} min</b><small>{dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`} away{road ? '' : ' (approx.)'}</small></div> : <div><b>Live location</b><small>Your delivery partner's position</small></div>}
         <small className={stale > 60000 ? 'warn' : 'muted'}>● Updated {ago(stale)}</small>
       </div>
     </div>
@@ -43,6 +45,7 @@ export default function MyOrders() {
   const { state } = useLocation();
   const [orders, setOrders] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const origin = ll({ lat: parseFloat(settings.contact?.lat), lng: parseFloat(settings.contact?.lng) });
   const onRoad = !!orders?.some((o) => o.status === 'out-for-delivery');
 
   const load = () => api.get('/orders/mine').then((d) => setOrders(d.orders)).catch((e) => toast(e.message, 'err'));
@@ -90,7 +93,7 @@ export default function MyOrders() {
             {idx >= 0 && (
               <div className="track">{steps.map((s, n) => <div key={s} className={`track-step ${n <= idx ? 'done' : ''}`}><i />{L[s]}</div>)}</div>
             )}
-            {isDel && o.status === 'out-for-delivery' && <LiveMap o={o} now={now} />}
+            {isDel && o.status === 'out-for-delivery' && <LiveMap o={o} now={now} origin={origin} />}
             {isDel && o.trackingId && o.status !== 'pending-payment' && (
               <div className="delivery-box">
                 <div className="dbox-row"><span>🔎 Tracking ID</span><b>{o.trackingId}</b></div>

@@ -33,6 +33,8 @@ module.exports = {
     mapUrl: 'https://maps.google.com/?q=Aapla+Katta+Chinchwad+Pune',
     hours: 'Open daily · Closes 11 pm',
     instagram: 'aapla.katta_gmf',
+    lat: '18.6298', // restaurant position for delivery routes (edit in Admin → Contact & settings)
+    lng: '73.7997',
   },
   charges: {
     gstPercent: 0,
