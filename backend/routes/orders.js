@@ -116,15 +116,33 @@ router.post('/verify-payment', protect, async (req, res) => {
   res.json({ order });
 });
 
+// Delivery orders placed before tracking existed have no tracking ID – give them one on first read.
+async function backfillTracking(orders) {
+  for (const o of orders) {
+    if (o.orderType === 'delivery' && !o.trackingId && o.status !== 'pending-payment') {
+      for (let i = 0; i < 3 && !o.trackingId; i++) {
+        try {
+          const id = genTrackingId();
+          const r = await Order.updateOne({ _id: o._id, trackingId: { $exists: false } }, { trackingId: id });
+          if (r.modifiedCount) o.trackingId = id; else { const f = await Order.findById(o._id).select('trackingId'); if (f?.trackingId) o.trackingId = f.trackingId; else break; }
+        } catch (_) { /* duplicate id – retry with a new one */ }
+      }
+    }
+  }
+  return orders;
+}
+
 router.get('/mine', protect, async (req, res) => {
-  res.json({ orders: await Order.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(50) });
+  const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(50);
+  res.json({ orders: await backfillTracking(orders) });
 });
 
 // ---- Admin ----
 router.get('/', protect, adminOnly, async (req, res) => {
   const q = { status: { $ne: 'pending-payment' } };
   if (req.query.status) q.status = req.query.status;
-  res.json({ orders: await Order.find(q).sort({ createdAt: -1 }).limit(200) });
+  const orders = await Order.find(q).sort({ createdAt: -1 }).limit(200);
+  res.json({ orders: await backfillTracking(orders) });
 });
 
 router.get('/stats', protect, adminOnly, async (_req, res) => {
