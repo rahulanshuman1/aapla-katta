@@ -31,8 +31,20 @@ const orderSchema = new mongoose.Schema(
     paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
     status: {
       type: String,
-      enum: ['pending-payment', 'placed', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'],
+      enum: ['pending-payment', 'placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery', 'completed', 'cancelled'],
       default: 'placed',
+    },
+    // ---- delivery tracking (only for orderType "delivery") ----
+    trackingId: { type: String, unique: true, sparse: true },
+    deliveryLocation: { lat: Number, lng: Number },       // where the customer dropped their pin
+    delivery: {
+      partner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      name: String,
+      phone: String,
+      assignedAt: Date,
+      startedAt: Date,
+      deliveredAt: Date,
+      location: { lat: Number, lng: Number, heading: Number, speed: Number, accuracy: Number, at: Date }, // rider's latest GPS fix
     },
     razorpayOrderId: String,
     razorpayPaymentId: String,

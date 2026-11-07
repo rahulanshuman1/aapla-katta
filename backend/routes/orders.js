@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
 const { protect, adminOnly } = require('../middleware/auth');
 const { getSettings } = require('../utils/settings');
+const { genTrackingId, validLatLng } = require('../utils/geo');
 const { sendOrderEmails, sendStatusEmail } = require('../utils/emailTemplates');
 
 let rzp;
@@ -41,7 +42,7 @@ router.post('/', protect, async (req, res) => {
     const s = await getSettings();
     if (!s.charges.acceptingOrders) return res.status(400).json({ message: 'Sorry, we are not accepting online orders right now.' });
 
-    const { items, orderType = 'dine-in', tableNo = '', address = '', phone, notes = '', paymentMethod = 'online' } = req.body;
+    const { items, orderType = 'dine-in', tableNo = '', address = '', phone, notes = '', paymentMethod = 'online', deliveryLocation } = req.body;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Your cart is empty' });
     if (!phone || String(phone).replace(/\D/g, '').length < 10) return res.status(400).json({ message: 'Enter a valid phone number' });
     if (orderType === 'delivery' && !address.trim()) return res.status(400).json({ message: 'Delivery address is required' });
@@ -71,6 +72,9 @@ router.post('/', protect, async (req, res) => {
       orderNo: orderNo(), user: req.user._id, customerName: req.user.name, customerEmail: req.user.email, phone,
       items: lines, subtotal, gst, deliveryFee, total: subtotal + gst + deliveryFee,
       orderType, tableNo, address, notes, paymentMethod,
+      // Delivery orders get a live-tracking ID the moment they are created
+      trackingId: orderType === 'delivery' ? genTrackingId() : undefined,
+      deliveryLocation: orderType === 'delivery' && validLatLng(deliveryLocation) ? { lat: Number(deliveryLocation.lat), lng: Number(deliveryLocation.lng) } : undefined,
       paymentStatus: 'pending', status: paymentMethod === 'online' ? 'pending-payment' : 'placed',
     });
 
@@ -126,7 +130,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
 router.get('/stats', protect, adminOnly, async (_req, res) => {
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const today = await Order.find({ createdAt: { $gte: start }, status: { $nin: ['pending-payment', 'cancelled'] } });
-  const open = await Order.countDocuments({ status: { $in: ['placed', 'confirmed', 'preparing', 'ready'] } });
+  const open = await Order.countDocuments({ status: { $in: ['placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery'] } });
   res.json({ ordersToday: today.length, revenueToday: today.reduce((a, o) => a + o.total, 0), openOrders: open });
 });
 
@@ -134,7 +138,12 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
   const { status } = req.body;
   const order = await Order.findById(req.params.id);
   if (!order) return res.status(404).json({ message: 'Not found' });
+  if (status === 'out-for-delivery' && !(order.orderType === 'delivery' && order.delivery?.partner)) {
+    return res.status(400).json({ message: 'Assign a delivery partner first' });
+  }
   order.status = status;
+  if (status === 'out-for-delivery' && !order.delivery.startedAt) order.delivery.startedAt = new Date();
+  if (status === 'completed' && order.orderType === 'delivery') order.delivery.deliveredAt = order.delivery.deliveredAt || new Date();
   if (status === 'completed' && order.paymentMethod === 'cod') order.paymentStatus = 'paid';
   await order.save();
   sendStatusEmail(order);

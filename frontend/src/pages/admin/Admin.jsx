@@ -3,11 +3,13 @@ import { motion } from 'framer-motion';
 import { useApp } from '../../store';
 import AdminOrders from './AdminOrders';
 import AdminMenu from './AdminMenu';
+import AdminDelivery from './AdminDelivery';
 import AdminAppearance from './AdminAppearance';
 import { AdminContent, AdminBusiness } from './AdminSite';
 
 const TABS = [
   ['orders', '📦 Orders'],
+  ['delivery', '🛵 Delivery team'],
   ['menu', '🍽️ Menu & prices'],
   ['appearance', '🎨 Theme & logo'],
   ['content', '✏️ Website text'],
@@ -38,6 +40,7 @@ export default function Admin() {
       </div>
       <div className="admin-body">
         {tab === 'orders' && <AdminOrders />}
+        {tab === 'delivery' && <AdminDelivery />}
         {tab === 'menu' && <AdminMenu />}
         {tab === 'appearance' && <AdminAppearance />}
         {tab === 'content' && <AdminContent />}

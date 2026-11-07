@@ -123,7 +123,7 @@ export function AppProvider({ children }) {
 
   const value = useMemo(() => ({
     settings, savedSettings, meta, ready, activeTheme, draft, setDraft, previewing, previewRef, startPreview, endPreview, refreshSettings, saveSettings, saveContent, text,
-    user, authReady, setAuth, logout, isAdmin: user?.role === 'admin',
+    user, authReady, setAuth, logout, isAdmin: user?.role === 'admin', isDelivery: user?.role === 'delivery',
     menu, loadMenu, setMenu,
     cart, addToCart, changeQty, clearCart, cartCount, cartTotal, cartOpen, setCartOpen,
     editMode, setEditMode, toast, toasts,

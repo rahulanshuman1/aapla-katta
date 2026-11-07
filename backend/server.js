@@ -13,7 +13,12 @@ app.use(helmet());
 
 const origins = (process.env.CLIENT_URL || 'https://aapla-katta.vercel.app').split(',').map((s) => s.trim().replace(/\/$/, ''));
 app.use(cors({
-  origin: (origin, cb) => (!origin || origins.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS'))),
+  origin: (origin, cb) => {
+    if (!origin || origins.includes(origin)) return cb(null, true);
+    // Don't throw (that prints a huge stack trace) – just log which website was refused and why
+    console.warn(`[cors] blocked origin "${origin}". Allowed (CLIENT_URL): ${origins.join(', ')}`);
+    cb(null, false);
+  },
 }));
 app.use(express.json({ limit: '12mb' })); // logo / hero / footer / item photos are sent as compressed data URLs
 
@@ -22,6 +27,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/delivery', require('./routes/delivery'));
+app.use('/api/track', require('./routes/track'));
 
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
 app.use((err, _req, res, _next) => {

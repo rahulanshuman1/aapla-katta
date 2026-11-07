@@ -5,7 +5,7 @@ import { useApp } from '../store';
 import AnimatedLogo from './AnimatedLogo';
 
 export default function Navbar() {
-  const { user, logout, isAdmin, cartCount, setCartOpen, activeTheme } = useApp();
+  const { user, logout, isAdmin, isDelivery, cartCount, setCartOpen, activeTheme } = useApp();
   const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -36,7 +36,8 @@ export default function Navbar() {
           <NavLink to="/menu" onClick={close}>Menu</NavLink>
           <Link to="/#catering" onClick={close}>Catering</Link>
           <Link to="/#visit" onClick={close}>Visit us</Link>
-          {user && <NavLink to="/orders" onClick={close}>My orders</NavLink>}
+          {user && !isDelivery && <NavLink to="/orders" onClick={close}>My orders</NavLink>}
+          {isDelivery && <NavLink to="/delivery" onClick={close}>🛵 My deliveries</NavLink>}
           {isAdmin && <NavLink to="/admin" onClick={close}>Admin</NavLink>}
         </div>
 
@@ -57,7 +58,7 @@ export default function Navbar() {
                 {menuOpen && (
                   <motion.div className="dropdown" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                     <div className="dropdown-head"><b>{user.name}</b><small>{user.email}</small></div>
-                    <Link to="/orders" onClick={close}>📦 My orders</Link>
+                    {isDelivery ? <Link to="/delivery" onClick={close}>🛵 My deliveries</Link> : <Link to="/orders" onClick={close}>📦 My orders</Link>}
                     {isAdmin && <Link to="/admin" onClick={close}>⚙️ Admin panel</Link>}
                     <button onClick={() => { logout(); close(); nav('/'); }}>🚪 Sign out</button>
                   </motion.div>

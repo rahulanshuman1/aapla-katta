@@ -33,7 +33,7 @@ export function Login() {
       const d = await api.post('/auth/login', f);
       setAuth(d.token, d.user);
       toast(`Welcome back, ${d.user.name.split(' ')[0]}!`);
-      nav(p.get('next') || (d.user.role === 'admin' ? '/admin' : '/menu'), { replace: true });
+      nav(p.get('next') || (d.user.role === 'admin' ? '/admin' : d.user.role === 'delivery' ? '/delivery' : '/menu'), { replace: true });
     } catch (e2) {
       setErr(e2.message);
       if (e2.code === 'EMAIL_NOT_VERIFIED') setUnverified(true);

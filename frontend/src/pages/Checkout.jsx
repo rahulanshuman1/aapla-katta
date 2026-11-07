@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api, inr } from '../api';
 import { useApp } from '../store';
+import LocationPicker from '../components/LocationPicker';
 
 function loadRazorpay() {
   return new Promise((resolve) => {
@@ -52,7 +53,7 @@ export default function Checkout() {
   const { cart, cartTotal, changeQty, clearCart, user, settings, meta, toast } = useApp();
   const nav = useNavigate();
   const ch = settings.charges;
-  const [f, setF] = useState({ phone: user.phone || '', orderType: 'dine-in', tableNo: '', address: user.address || '', notes: '', paymentMethod: meta.razorpayEnabled ? 'online' : 'cod' });
+  const [f, setF] = useState({ phone: user.phone || '', orderType: 'dine-in', tableNo: '', address: user.address || '', notes: '', location: null, paymentMethod: meta.razorpayEnabled ? 'online' : 'cod' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [snap, setSnap] = useState(null); // frozen copy of the cart once the order is placed (cart itself is cleared)
@@ -75,7 +76,8 @@ export default function Checkout() {
     if (cartTotal < ch.minOrder) return setErr(`Minimum order value is ${inr(ch.minOrder)}`);
     setBusy(true);
     try {
-      const d = await api.post('/orders', { ...f, items: cart.map((l) => ({ itemId: l.itemId, variant: l.variant, qty: l.qty })) });
+      const { location, ...fields } = f;
+      const d = await api.post('/orders', { ...fields, deliveryLocation: f.orderType === 'delivery' ? location : undefined, items: cart.map((l) => ({ itemId: l.itemId, variant: l.variant, qty: l.qty })) });
       // The order now exists on the server – empty the cart right away so it can never be re-submitted or left behind
       setSnap({ lines: cart, subtotal: cartTotal });
       clearCart();
@@ -87,7 +89,7 @@ export default function Checkout() {
           return nav('/orders');
         }
       }
-      nav('/orders', { state: { placed: d.order.orderNo } });
+      nav('/orders', { state: { placed: d.order.orderNo, trackingId: d.order.trackingId } });
     } catch (e2) {
       setErr(e2.message);
     } finally { setBusy(false); }
@@ -108,6 +110,7 @@ export default function Checkout() {
           <label>Phone number<input required type="tel" inputMode="tel" placeholder="10-digit mobile number" value={f.phone} onChange={set('phone')} /></label>
           {f.orderType === 'dine-in' && <label>Table number (optional)<input value={f.tableNo} onChange={set('tableNo')} placeholder="e.g. 5" /></label>}
           {f.orderType === 'delivery' && <label>Delivery address<textarea required rows={3} value={f.address} onChange={set('address')} placeholder="House / flat, street, landmark" /></label>}
+          {f.orderType === 'delivery' && <LocationPicker value={f.location} onChange={(location) => setF((x) => ({ ...x, location }))} />}
           <label>Cooking instructions (optional)<textarea rows={2} value={f.notes} onChange={set('notes')} placeholder="Less spicy, no onion…" /></label>
 
           <h3 style={{ marginTop: 22 }}>Payment</h3>

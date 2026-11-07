@@ -18,6 +18,7 @@ export default function Footer() {
           <h4>Explore</h4>
           <Link to="/menu">Menu</Link>
           <Link to="/#catering">Catering</Link>
+          <Link to="/track">Track order</Link>
           <Link to="/orders">My orders</Link>
           <Link to="/login">Sign in</Link>
         </div>

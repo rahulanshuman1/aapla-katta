@@ -14,6 +14,8 @@ import Home from './pages/Home';
 import MenuPage from './pages/MenuPage';
 import Checkout from './pages/Checkout';
 import MyOrders from './pages/MyOrders';
+import Track from './pages/Track';
+import Delivery from './pages/Delivery';
 import { Login, Register, VerifyEmail, Forgot, Reset } from './pages/Auth';
 import Admin from './pages/admin/Admin';
 
@@ -26,12 +28,13 @@ function ScrollTop() {
   return null;
 }
 
-function Guard({ children, admin }) {
+function Guard({ children, admin, roles }) {
   const { user, authReady, isAdmin } = useApp();
   const loc = useLocation();
   if (!authReady) return <div className="page-loader"><div className="spinner" /></div>;
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname)}`} replace />;
   if (admin && !isAdmin) return <Navigate to="/" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -57,6 +60,9 @@ export default function App() {
             <Route path="/reset-password" element={<Reset />} />
             <Route path="/checkout" element={<Guard><Checkout /></Guard>} />
             <Route path="/orders" element={<Guard><MyOrders /></Guard>} />
+            <Route path="/track" element={<Track />} />
+            <Route path="/track/:code" element={<Track />} />
+            <Route path="/delivery" element={<Guard roles={['delivery', 'admin']}><Delivery /></Guard>} />
             <Route path="/admin" element={<Guard admin><Admin /></Guard>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

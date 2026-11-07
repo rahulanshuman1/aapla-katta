@@ -92,13 +92,17 @@ async function sendOrderEmails(order) {
       <b>Payment:</b> ${pay}<br/>
       ${order.notes ? `<b>Notes:</b> ${esc(order.notes)}<br/>` : ''}</p>`;
 
+  const trackLink = order.trackingId ? `${base}/track/${order.trackingId}` : '';
+  const trackBlock = order.trackingId
+    ? `<p style="background:#fff6e0;border-radius:12px;padding:12px 16px;font-size:14px;margin:16px 0 0">🛵 <b>Live tracking ID:</b> <span style="font-size:16px;letter-spacing:1px"><b>${esc(order.trackingId)}</b></span><br/>You'll see your delivery partner's live location here once your order is on the way.</p>`
+    : '';
   const customer = sendMail({
     to: order.customerEmail,
     subject: `Order ${order.orderNo} confirmed – ${s.brand.name}`,
     html: layout(s, `Thank you, ${esc(order.customerName)}! Your order is in 🍽️`,
       `<p>Order <b>#${order.orderNo}</b> has been received. Please allow a minimum of 20 minutes to serve your order.</p>
-       ${orderTable(s, order)}${meta}
-       ${button(s, base + '/orders', 'Track my order')}`),
+       ${orderTable(s, order)}${meta}${trackBlock}
+       ${button(s, trackLink || base + '/orders', trackLink ? 'Track my delivery' : 'Track my order')}`),
   });
 
   const adminTo = process.env.ORDER_NOTIFY_EMAIL || process.env.ADMIN_EMAIL || s.contact.email;
@@ -116,19 +120,39 @@ async function sendOrderEmails(order) {
 
 async function sendStatusEmail(order) {
   const s = await getSettings();
+  const base = process.env.CLIENT_URL.split(',')[0].trim();
+  const delivery = order.orderType === 'delivery';
+  const trackLink = order.trackingId ? `${base}/track/${order.trackingId}` : '';
+  const rider = order.delivery && order.delivery.name ? `<p style="font-size:14px">Your delivery partner: <b>${esc(order.delivery.name)}</b> · 📞 <a href="tel:${esc(order.delivery.phone)}">${esc(order.delivery.phone)}</a></p>` : '';
   const msg = {
     confirmed: 'Your order has been confirmed by the kitchen.',
     preparing: 'Your food is being freshly prepared 👨‍🍳',
-    ready: order.orderType === 'delivery' ? 'Your order is out for delivery 🛵' : 'Your order is ready! 🎉',
-    completed: 'Your order is complete. Thank you for dining with us – see you again soon!',
+    ready: delivery ? 'Your order is packed and waiting for the delivery partner 📦' : 'Your order is ready! 🎉',
+    'out-for-delivery': 'Your order is on its way! 🛵 Follow your delivery partner live on the map.',
+    completed: delivery ? 'Your order has been delivered. Enjoy your meal! 🎉 Thank you for ordering from us.' : 'Your order is complete. Thank you for dining with us – see you again soon!',
     cancelled: 'Your order was cancelled. If you paid online, the refund will be processed by the restaurant. Call us for help.',
   }[order.status];
   if (!msg) return;
+  const track = delivery && trackLink && ['ready', 'out-for-delivery'].includes(order.status) ? button(s, trackLink, '📍 Track live') : '';
   await sendMail({
     to: order.customerEmail,
-    subject: `Order ${order.orderNo}: ${order.status}`,
-    html: layout(s, `Order #${order.orderNo} update`, `<p style="font-size:16px">${msg}</p>`),
+    subject: `Order ${order.orderNo}: ${order.status === 'out-for-delivery' ? 'on the way' : order.status === 'completed' && delivery ? 'delivered' : order.status}`,
+    html: layout(s, `Order #${order.orderNo} update`, `<p style="font-size:16px">${msg}</p>${order.status === 'out-for-delivery' ? rider : ''}${track}`),
   });
 }
 
-module.exports = { sendVerificationEmail, sendWelcomeEmail, sendResetEmail, sendOrderEmails, sendStatusEmail };
+async function sendAssignedEmail(order) {
+  const s = await getSettings();
+  const base = process.env.CLIENT_URL.split(',')[0].trim();
+  await sendMail({
+    to: order.customerEmail,
+    subject: `Delivery partner assigned – order ${order.orderNo}`,
+    html: layout(s, `Order #${order.orderNo}: delivery partner assigned 🛵`,
+      `<p style="font-size:16px"><b>${esc(order.delivery.name)}</b> will deliver your order.</p>
+       <p style="font-size:14px">📞 <a href="tel:${esc(order.delivery.phone)}">${esc(order.delivery.phone)}</a><br/>Tracking ID: <b>${esc(order.trackingId)}</b></p>
+       ${button(s, `${base}/track/${order.trackingId}`, '📍 Track live')}
+       <p style="font-size:13px;color:#7a6a60">Live location appears on the map as soon as your order leaves the restaurant.</p>`),
+  });
+}
+
+module.exports = { sendVerificationEmail, sendWelcomeEmail, sendResetEmail, sendOrderEmails, sendStatusEmail, sendAssignedEmail };
