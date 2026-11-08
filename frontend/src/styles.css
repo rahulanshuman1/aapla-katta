@@ -221,7 +221,7 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
 .done-card { opacity: .8; }
 
 /* ---------- preview bar ---------- */
-.previewbar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 250; width: min(760px, calc(100% - 24px)); display: flex; align-items: center; justify-content: space-between; gap: 12px 18px; flex-wrap: wrap; background: #1f1511; color: #fff; padding: 12px 18px; border-radius: 18px; box-shadow: var(--shadow-lg); border: 2px solid var(--secondary); }
+.previewbar { position: fixed; left: 12px; right: 12px; margin: 0 auto; bottom: 16px; z-index: 250; width: auto; max-width: 760px; /* no transform: the animation library owns it */ display: flex; align-items: center; justify-content: space-between; gap: 12px 18px; flex-wrap: wrap; background: #1f1511; color: #fff; padding: 12px 18px; border-radius: 18px; box-shadow: var(--shadow-lg); border: 2px solid var(--secondary); }
 .previewbar-msg { display: flex; flex-direction: column; font-size: .8rem; opacity: .95; } .previewbar-msg b { font-size: .95rem; }
 .btn-outline-light { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); } .btn-outline-light:hover:not(:disabled) { background: rgba(255, 255, 255, .15); }
 
@@ -257,7 +257,7 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
 }
 @media (max-width: 760px) {
   .burger { display: block; }
-  .nav-links { position: absolute; top: 68px; left: 0; right: 0; flex-direction: column; background: var(--bg); padding: 10px 16px 16px; box-shadow: 0 14px 24px rgba(0, 0, 0, .12); display: none; } .nav-links.open { display: flex; }
+  .nav-links { position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; background: var(--bg); padding: 10px 16px 16px; box-shadow: 0 14px 24px rgba(0, 0, 0, .12); display: none; } .nav-links.open { display: flex; }
   .section { padding: 48px 0; } .catering { padding: 28px; } .menu-tools { top: 68px; }
   .hero { padding-top: 24px; }
 }
@@ -301,7 +301,9 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
   .footer { padding-top: 36px; } .footer-grid { gap: 22px; } .footer span, .footer a { overflow-wrap: anywhere; }
   .toasts { left: 14px; right: 14px; top: 76px; } .toast { max-width: none; }
   .editbar { right: 10px; bottom: 10px; gap: 6px; } .editbar .btn { padding: 8px 12px; font-size: .78rem; }
-  .previewbar { bottom: 8px; padding: 10px 12px; } .previewbar .btn { flex: 1; }
+  .previewbar { bottom: 8px; padding: 10px 12px; border-radius: 16px; } .previewbar-msg span { font-size: .75rem; } .previewbar .btn-row { width: 100%; gap: 6px; } .previewbar .btn { flex: 1 1 auto; padding: 8px 10px; font-size: .8rem; white-space: nowrap; }
+  .sticky-save { bottom: 72px; padding: 10px; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lg); }
+  .sticky-save .btn { flex: 1 1 calc(50% - 8px); padding: 10px 12px; font-size: .88rem; white-space: nowrap; } .sticky-save .dirty-note { flex: 1 1 100%; text-align: center; }
   .fx-bit:nth-child(n+9) { display: none; } .fx-bit { opacity: .5; }
   .admin { padding: 18px 0 90px; } .admin-head h1 { font-size: 1.5rem; } .admin-tabs button { padding: 10px 12px; font-size: .84rem; }
   .delivery-admin .ai-name { flex-basis: 100%; } .delivery-admin .admin-item { gap: 8px 10px; } .cat-edit { gap: 8px; padding: 12px; } .cat-edit input:not([type=checkbox]) { min-width: 0; } .menu-admin-tools .btn { padding: 8px 14px; }
