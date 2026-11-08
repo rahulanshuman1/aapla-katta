@@ -122,7 +122,7 @@ export default function Home() {
               <Editable k="catering.title" as="h2" />
               <Editable k="catering.text" as="p" />
             </div>
-            <a className="btn btn-gold btn-lg catering-btn" href={`tel:${phone}`}><span aria-hidden="true">📞</span><span className="catering-btn-text"><Editable k="catering.cta" /> <span className="nowrap">· {contact.phone}</span></span></a>
+            <a className="btn btn-gold btn-lg catering-btn" href={`tel:${phone}`}><span aria-hidden="true">📞</span><span className="catering-btn-text"><Editable k="catering.cta" /> <b className="nowrap catering-phone">{contact.phone}</b></span></a>
           </motion.div>
         </div>
       </section>
