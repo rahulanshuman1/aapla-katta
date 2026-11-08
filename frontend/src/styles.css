@@ -272,10 +272,12 @@ hr { border: 0; border-top: 1px dashed var(--border); margin: 12px 0; }
   .splash .logo-name { font-size: clamp(2.4rem, 13vw, 3.4rem); } .logo-ribbon { padding: 8px 26px 12px; } .splash-sub { font-size: .68rem; letter-spacing: 1.2px; text-align: center; padding: 0 16px; }
   .menu-hero { padding: 30px 0 26px; } .menu-tools { top: 62px; } .menu-cat { scroll-margin-top: 170px; }
   .menu-cat-head h2 { font-size: 1.35rem; } .menu-cat-icon { width: 44px; height: 44px; font-size: 1.4rem; flex: none; }
-  .dish { flex-wrap: wrap; gap: 10px 12px; } .dish-body { flex: 1 1 calc(100% - 80px); min-width: 0; }
-  .dish-side { flex: 1 1 100%; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .dish-row { flex-wrap: wrap; gap: 10px 12px; } .dish-row .dish-body { flex: 1 1 calc(100% - 80px); min-width: 0; }
+  .dish-row .dish-side { flex: 1 1 100%; flex-direction: row; justify-content: space-between; align-items: center; flex-wrap: wrap; border-top: 1px dashed var(--border); padding-top: 8px; }
+  /* Crowd favourites cards: single column, never wrap sideways */
+  .dish-card { flex-wrap: nowrap; min-width: 0; padding: 14px; } .dish-card .dish-thumb { height: 120px; font-size: 3rem; } .dish-card .dish-body { flex: none; width: 100%; } .dish-card .dish-side { border-top: 0; padding-top: 0; }
   .dish-title h4, .dish-desc, .order-items li span { overflow-wrap: anywhere; }
-  .cat-grid { grid-template-columns: repeat(2, 1fr); } .grid-cards { grid-template-columns: 1fr; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); } .grid-cards { grid-template-columns: minmax(0, 1fr); }
   .catering { padding: 22px; } .catering .btn { width: 100%; }
   .info-row { gap: 10px; } .visit-actions .btn { flex: 1 1 100%; }
   .drawer { width: 100%; } .drawer-head, .drawer-body, .drawer-foot { padding-left: 16px; padding-right: 16px; }
