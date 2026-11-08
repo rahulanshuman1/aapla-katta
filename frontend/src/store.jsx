@@ -17,7 +17,10 @@ const FALLBACK_SETTINGS = {
 const loadCart = () => { try { return JSON.parse(localStorage.getItem('ak_cart')) || []; } catch { return []; } };
 
 export function AppProvider({ children }) {
-  const [savedSettings, setSavedSettings] = useState(FALLBACK_SETTINGS);
+  const [savedSettings, setSavedSettings] = useState(() => {
+    try { const c = JSON.parse(localStorage.getItem('ak_settings') || 'null'); if (c && c.brand && c.theme) return { ...FALLBACK_SETTINGS, ...c }; } catch { /* ignore */ }
+    return FALLBACK_SETTINGS;
+  });
   const [draft, setDraft] = useState(null);          // unsaved appearance changes {theme, brand} – applied site-wide as a preview
   const [previewing, setPreviewing] = useState(false);
   const previewRef = useRef(false);
@@ -43,6 +46,7 @@ export function AppProvider({ children }) {
       const d = await api.get('/settings');
       setSavedSettings(d.settings);
       setMeta(d.meta);
+      try { localStorage.setItem('ak_settings', JSON.stringify(d.settings)); } catch { /* quota (big images) – fine */ }
     } catch { /* keep fallback so the site still renders */ }
     setReady(true);
   }, []);

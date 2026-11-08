@@ -8,19 +8,22 @@ export default function Splash() {
   const { ready } = useApp();
   const [show, setShow] = useState(() => !sessionStorage.getItem('ak_splash'));
   const [minDone, setMinDone] = useState(false);
+  const [maxDone, setMaxDone] = useState(false);
 
   useEffect(() => {
     if (!show) return;
-    const t = setTimeout(() => setMinDone(true), 2300);
-    return () => clearTimeout(t);
+    // short brand moment (1.8 s); never wait more than 3 s for the server – it may be waking up (Render free plan)
+    const t = setTimeout(() => setMinDone(true), 1800);
+    const t2 = setTimeout(() => setMaxDone(true), 3000);
+    return () => { clearTimeout(t); clearTimeout(t2); };
   }, [show]);
 
   useEffect(() => {
-    if (show && minDone && ready) {
+    if (show && minDone && (ready || maxDone)) {
       sessionStorage.setItem('ak_splash', '1');
       setShow(false);
     }
-  }, [show, minDone, ready]);
+  }, [show, minDone, maxDone, ready]);
 
   return (
     <AnimatePresence>
