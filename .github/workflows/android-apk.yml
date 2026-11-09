@@ -34,7 +34,16 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Is Firebase (push notifications) configured?
+        id: fb
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then echo "push=true" >> "$GITHUB_OUTPUT"; else echo "push=false" >> "$GITHUB_OUTPUT"; fi
+
       - name: Build website
+        env:
+          VITE_PUSH_ENABLED: ${{ steps.fb.outputs.push }}
         run: npx vite build
 
       - name: Create Android project (first time only)

@@ -12,6 +12,10 @@ if (!process.env.VITE_API_URL && !fs.existsSync('.env.production') && !fs.exists
   console.warn('\n⚠️  VITE_API_URL is not set – the app will use the default backend URL from src/api.js. Create frontend/.env.production with VITE_API_URL=https://<your-backend>.onrender.com if that is not your backend.');
 }
 
+// push notifications are only switched on when the Firebase config file is present (otherwise Android crashes on register)
+const hasFirebase = fs.existsSync('android/app/google-services.json') || fs.existsSync('ios/App/App/GoogleService-Info.plist');
+process.env.VITE_PUSH_ENABLED = hasFirebase ? 'true' : 'false';
+console.log(hasFirebase ? 'Firebase config found - push notifications ON' : 'No Firebase config file yet - push notifications OFF (see MOBILE.md step 1)');
 sh('npx vite build');
 if (!fs.existsSync('android')) sh('npx cap add android');
 if (!fs.existsSync('ios')) { if (mac) sh('npx cap add ios'); else console.log('\n(iOS project skipped – it can only be created on a Mac. Run this script again on a Mac.)'); }

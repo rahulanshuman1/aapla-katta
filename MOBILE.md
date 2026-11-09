@@ -136,3 +136,10 @@ Without the keystore secrets you get the **debug APK**, which installs fine on p
 `keytool -genkey -v -keystore aapla-katta.jks -keyalg RSA -keysize 2048 -validity 10000 -alias aaplakatta`
 
 The version number is the GitHub build number, so every build installs over the previous one. iOS cannot be built this way without a paid Mac runner and Apple certificates.
+
+### Turning on push in the automatic APK (and why the app crashed without it)
+Android crashes if the app asks for notifications but has no Firebase file inside it. So push is **off** unless the build contains it. To switch it on:
+1. Firebase console → Project settings → **General** → **Add app → Android** → package name **`in.aaplakatta.app`** (must match `appId` in `frontend/capacitor.config.json`) → download **`google-services.json`**.
+2. Convert to base64 (`base64 -w0 google-services.json`; Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("google-services.json"))`).
+3. GitHub repo → Settings → Secrets and variables → Actions → **New repository secret** → name `GOOGLE_SERVICES_JSON`, value = that text.
+4. Push any change (or Actions → Run workflow). The new APK will have push notifications on.

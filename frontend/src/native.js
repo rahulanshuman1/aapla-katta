@@ -28,6 +28,8 @@ export async function initNative(navigate) {
 /** Ask for notification permission, register with Firebase and send the device token to our server. */
 export async function registerPush(api, navigate, onForeground) {
   if (!isNative) return;
+  // Without Firebase config inside the app (google-services.json), Android crashes the moment push is registered – so only enable it when the build included that file.
+  if (import.meta.env.VITE_PUSH_ENABLED !== 'true') return;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
     let perm = await PushNotifications.checkPermissions();
