@@ -309,7 +309,12 @@ html.native .drawer-foot { padding-bottom: calc(18px + env(safe-area-inset-botto
   .info-row { gap: 10px; } .visit-actions .btn { flex: 1 1 100%; }
   .drawer { width: 100%; } .drawer-head, .drawer-body, .drawer-foot { padding-left: 16px; padding-right: 16px; }
   .cart-line { grid-template-columns: 1fr auto; } .cart-line-total { grid-column: 2; text-align: right; }
-  .sum-line { grid-template-columns: 1fr auto; } .sum-line > span:nth-child(2) { grid-column: 1; } .sum-line b { grid-column: 2; grid-row: 1; }
+  /* checkout summary: name + price on the first row, compact quantity control under the name */
+  .sum-line { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 8px 0; }
+  .sum-line > span { grid-column: 1; grid-row: 1; overflow-wrap: anywhere; }
+  .sum-line > b { grid-column: 2; grid-row: 1; align-self: start; white-space: nowrap; }
+  .sum-line > .stepper { grid-column: 1; grid-row: 2; justify-self: start; width: auto; }
+  .stepper-sm button { width: 30px; height: 28px; } .stepper-sm span { min-width: 26px; }
   .order-head { align-items: flex-start; } .order-items li { gap: 12px; } .order-items li span:last-child { flex: none; }
   /* order status: vertical timeline on phones so labels never collide */
   .track { flex-direction: column; margin: 14px 0 6px 4px; }
