@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { api } from '../api';
 import { useApp } from '../store';
 import AnimatedLogo from '../components/AnimatedLogo';
+import PasswordInput from '../components/PasswordInput';
 
 function Shell({ title, sub, children }) {
   return (
@@ -45,7 +46,7 @@ export function Login() {
     <Shell title="Sign in" sub="Welcome back! Sign in to order and track your food.">
       <form onSubmit={submit}>
         <label>Email<input type="email" required autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-        <label>Password<input type="password" required autoComplete="current-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
+        <label>Password<PasswordInput required autoComplete="current-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
         {err && <p className="alert err">{err}</p>}
         {unverified && <button type="button" className="link-btn" onClick={resend}>Resend verification email</button>}
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
@@ -85,7 +86,7 @@ export function Register() {
         <label>Full name<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label>Email<input type="email" required autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <label>Mobile number<input type="tel" required value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
-        <label>Password<input type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
+        <label>Password<PasswordInput required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
         {err && <p className="alert err">{err}</p>}
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
       </form>
@@ -150,7 +151,7 @@ export function Reset() {
   return (
     <Shell title="Choose a new password">
       <form onSubmit={submit}>
-        <label>New password<input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>New password<PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         {err && <p className="alert err">{err}</p>}
         <button className="btn btn-primary btn-block">Update password</button>
       </form>

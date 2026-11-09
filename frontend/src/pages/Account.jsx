@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getToken } from '../api';
 import { useApp } from '../store';
+import PasswordInput from '../components/PasswordInput';
 
 /** My account: edit details and delete the account (required by Apple App Store and Google Play). */
 export default function Account() {
@@ -45,7 +46,7 @@ export default function Account() {
         <form className="card danger-zone" onSubmit={del}>
           <h3>Delete my account</h3>
           <p className="muted">This permanently deletes your account and removes your name, phone number, address and saved locations from all your past orders. It cannot be undone.</p>
-          <label>Enter your password to confirm<input type="password" required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+          <label>Enter your password to confirm<PasswordInput required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
           <label className="check"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} /> I understand this cannot be undone</label>
           {err && <p className="alert err">{err}</p>}
           <button className="btn btn-outline" disabled={busy || !sure || !pw}>{busy ? 'Deleting…' : 'Delete my account'}</button>
