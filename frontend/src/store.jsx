@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, getToken, setToken } from './api';
 import { CONTENT } from './defaultContent';
 import { THEMES } from './themes';
+import { unregisterPush } from './native';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -95,7 +96,7 @@ export function AppProvider({ children }) {
     api.get('/auth/me').then((d) => setUser(d.user)).catch(() => setToken(null)).finally(() => setAuthReady(true));
   }, []);
   const setAuth = useCallback((token, u) => { setToken(token); setUser(u); }, []);
-  const logout = useCallback(() => { setToken(null); setUser(null); setEditMode(false); }, []);
+  const logout = useCallback(() => { unregisterPush(api); setToken(null); setUser(null); setEditMode(false); }, []);
   useEffect(() => { if (user?.role !== 'admin') setEditMode(false); }, [user]);
 
   // ---- menu ----

@@ -7,6 +7,9 @@ import Footer from './components/Footer';
 import CartDrawer from './components/CartDrawer';
 import FestivalFX from './components/FestivalFX';
 import Splash from './components/Splash';
+import NativeBridge from './components/NativeBridge';
+import Account from './pages/Account';
+import { Privacy, Terms } from './pages/Legal';
 import Toasts from './components/Toasts';
 import EditBar from './components/EditBar';
 import PreviewBar from './components/PreviewBar';
@@ -45,6 +48,7 @@ export default function App() {
   return (
     <>
       <Splash />
+      <NativeBridge />
       <ScrollTop />
       <FestivalFX effect={activeTheme.effect} />
       <Navbar />
@@ -60,6 +64,9 @@ export default function App() {
             <Route path="/reset-password" element={<Reset />} />
             <Route path="/checkout" element={<Guard><Checkout /></Guard>} />
             <Route path="/orders" element={<Guard><MyOrders /></Guard>} />
+            <Route path="/account" element={<Guard><Account /></Guard>} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/track" element={<Track />} />
             <Route path="/track/:code" element={<Track />} />
             <Route path="/delivery" element={<Guard roles={['delivery', 'admin']}><Delivery /></Guard>} />

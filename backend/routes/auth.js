@@ -100,4 +100,38 @@ router.put('/me', protect, async (req, res) => {
   res.json({ user: req.user.toPublic() });
 });
 
+// ---- mobile app: push token registration ----
+router.post('/push-token', protect, async (req, res) => {
+  const token = String(req.body.token || '').trim();
+  if (!token || token.length > 4096) return res.status(400).json({ message: 'Invalid token' });
+  const platform = ['android', 'ios'].includes(req.body.platform) ? req.body.platform : 'unknown';
+  // a device token belongs to one account only (shared phones / account switches)
+  await User.updateMany({ 'pushTokens.token': token }, { $pull: { pushTokens: { token } } });
+  const u = await User.findById(req.user._id).select('pushTokens');
+  u.pushTokens = [...(u.pushTokens || []), { token, platform }].slice(-5); // max 5 devices
+  await u.save();
+  res.json({ ok: true });
+});
+router.delete('/push-token', protect, async (req, res) => {
+  const token = String(req.body.token || '');
+  if (token) await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: { token } } });
+  res.json({ ok: true });
+});
+
+// ---- delete my account (required by Apple App Store & Google Play) ----
+router.delete('/me', protect, async (req, res) => {
+  const Order = require('../models/Order');
+  if (req.user.role === 'admin') return res.status(403).json({ message: 'The owner (admin) account cannot be deleted here.' });
+  const withHash = await User.findById(req.user._id).select('+passwordHash');
+  if (!req.body.password || !(await withHash.comparePassword(String(req.body.password)))) return res.status(400).json({ message: 'Password is incorrect' });
+  const ACTIVE = ['placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery'];
+  const open = await Order.countDocuments({ $or: [{ user: req.user._id }, { 'delivery.partner': req.user._id }], status: { $in: ACTIVE } });
+  if (open) return res.status(400).json({ message: 'You have an order in progress. Please try again once it is completed.' });
+  // keep order records for the restaurant's accounting, but remove all personal details
+  await Order.updateMany({ user: req.user._id }, { $set: { customerName: 'Deleted user', customerEmail: '', phone: '', address: '', notes: '' }, $unset: { deliveryLocation: 1, 'delivery.location': 1 } });
+  await Order.updateMany({ 'delivery.partner': req.user._id }, { $set: { 'delivery.name': 'Former delivery partner', 'delivery.phone': '' }, $unset: { 'delivery.partner': 1, 'delivery.location': 1 } });
+  await User.deleteOne({ _id: req.user._id });
+  res.json({ message: 'Your account has been deleted.' });
+});
+
 module.exports = router;

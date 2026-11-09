@@ -87,3 +87,21 @@ Sign in with the admin email → the navbar shows **Admin**, and pages show a fl
 - Images (logo, hero, dish photos) are resized in the browser and stored in MongoDB, because Render's disk is wiped on each deploy.
 - Swiggy/Zomato appear as plain text badges (no third-party logos bundled).
 - **Not included yet:** a Razorpay *webhook* (if a customer pays and closes the tab before the browser confirms, the order stays "Awaiting payment" and can be reconciled from the Razorpay dashboard); live table-QR ordering; push/WhatsApp notifications.
+
+## Update notes (checkout, emails, appearance)
+
+- **Order emails** are now sent in the background, so payment confirmation never waits on email. Render's free plan blocks SMTP, so **set `BREVO_API_KEY`** (and `MAIL_FROM_EMAIL` = a sender verified in Brevo) on Render. Check it from Admin → *Contact & settings* → **Send test email to me**; check Render logs for lines starting `[mail]`.
+- **Appearance:** new footer background image; **Preview on site** shows unsaved changes on the real website (nothing is saved until *Save & publish*).
+
+## Delivery tracking (Swiggy/Zomato style)
+
+1. Customer picks **Delivery** at checkout and (recommended) pins their location on the map → the order gets a **Tracking ID** (`TRK-XXXXXXXXXX`), shown on My Orders and in the confirmation email.
+2. Admin → **Delivery team**: add riders (name, mobile, email, password). Admin → **Orders**: choose a rider on the delivery order → the customer is emailed the rider's name/number and tracking link.
+3. Rider signs in at `/login` (lands on **My deliveries**), taps **Start delivery** → phone GPS is shared every ~4 s (keep the page open) → customer sees the rider moving on the map at `/track/<ID>`, with ETA and a Call button.
+4. Rider taps **Mark delivered** → order becomes *Delivered* everywhere (customer page, admin, email). Cash-on-delivery orders are marked paid.
+
+Notes: maps use OpenStreetMap (free, no key; fine for light traffic – use a paid tile provider if you grow). Browsers only report GPS while the rider page stays open and the screen is on (the page requests a screen wake-lock). Run `npm install` in `frontend/` (new dependency: `leaflet`).
+
+## Mobile apps (Android & iOS)
+
+The same website is packaged as native apps with Capacitor, with push notifications, rider background GPS, delete-account, privacy policy and terms. See **[MOBILE.md](MOBILE.md)** for setup (`npm run mobile:setup`), Firebase push, and Play Store / App Store publishing.

@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     verifyExpires: { type: Date, select: false },
     resetTokenHash: { type: String, select: false },
     resetExpires: { type: Date, select: false },
+    pushTokens: { type: [{ _id: false, token: String, platform: String, at: { type: Date, default: Date.now } }], default: [], select: false }, // mobile app devices (FCM)
   },
   { timestamps: true }
 );

@@ -7,6 +7,7 @@ const { protect, adminOnly } = require('../middleware/auth');
 const { getSettings } = require('../utils/settings');
 const { genTrackingId, validLatLng } = require('../utils/geo');
 const { sendOrderEmails, sendStatusEmail } = require('../utils/emailTemplates');
+const { pushNewOrder, pushOrderStatus } = require('../utils/push');
 
 let rzp;
 const razorpay = () => {
@@ -17,7 +18,7 @@ const razorpay = () => {
 // Sends the order emails in the background (never makes the customer wait) and guarantees only one send per order.
 function notifyOrder(order) {
   Order.findOneAndUpdate({ _id: order._id, emailsSent: { $ne: true } }, { emailsSent: true }, { new: true })
-    .then((claimed) => claimed && sendOrderEmails(claimed))
+    .then((claimed) => { if (claimed) { pushNewOrder(claimed); return sendOrderEmails(claimed); } })
     .catch((e) => console.error('[order-email] failed:', e.message));
 }
 
@@ -165,6 +166,7 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
   if (status === 'completed' && order.paymentMethod === 'cod') order.paymentStatus = 'paid';
   await order.save();
   sendStatusEmail(order);
+  pushOrderStatus(order); // mobile push (no-op unless Firebase is configured)
   res.json({ order });
 });
 

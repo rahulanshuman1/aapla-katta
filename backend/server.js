@@ -11,10 +11,12 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 
-const origins = (process.env.CLIENT_URL || 'https://aapla-katta.vercel.app').split(',').map((s) => s.trim().replace(/\/$/, ''));
+const origins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map((s) => s.trim().replace(/\/$/, ''));
+const NATIVE_ORIGINS = ['https://localhost', 'capacitor://localhost', 'http://localhost', 'ionic://localhost'];
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || origins.includes(origin)) return cb(null, true);
+    // the mobile apps run inside a WebView whose origin is https://localhost (Android) or capacitor://localhost (iOS)
+    if (!origin || origins.includes(origin) || NATIVE_ORIGINS.includes(origin)) return cb(null, true);
     // Don't throw (that prints a huge stack trace) – just log which website was refused and why
     console.warn(`[cors] blocked origin "${origin}". Allowed (CLIENT_URL): ${origins.join(', ')}`);
     cb(null, false);

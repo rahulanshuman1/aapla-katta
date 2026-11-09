@@ -21,6 +21,8 @@ export default function Footer() {
           <Link to="/track">Track order</Link>
           <Link to="/orders">My orders</Link>
           <Link to="/login">Sign in</Link>
+          <Link to="/privacy">Privacy policy</Link>
+          <Link to="/terms">Terms of use</Link>
         </div>
         <div>
           <h4>Contact</h4>

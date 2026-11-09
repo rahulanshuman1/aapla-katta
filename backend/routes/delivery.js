@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Order = require('../models/Order');
 const { protect, adminOnly } = require('../middleware/auth');
 const { sendStatusEmail, sendAssignedEmail } = require('../utils/emailTemplates');
+const { pushOrderStatus, pushAssigned } = require('../utils/push');
 const { validLatLng, num } = require('../utils/geo');
 
 const ACTIVE = ['placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery'];
@@ -65,6 +66,7 @@ router.put('/orders/:id/assign', protect, adminOnly, async (req, res) => {
   order.delivery.partner = partner._id; order.delivery.name = partner.name; order.delivery.phone = partner.phone; order.delivery.assignedAt = new Date();
   await order.save();
   sendAssignedEmail(order).catch((e) => console.error('[assign-email]', e.message)); // background
+  pushAssigned(order);
   res.json({ order });
 });
 
@@ -87,6 +89,7 @@ router.post('/orders/:id/start', protect, riderOnly, async (req, res) => {
   if (validLatLng(req.body)) order.delivery.location = { lat: num(req.body.lat), lng: num(req.body.lng), at: new Date() };
   await order.save();
   sendStatusEmail(order).catch((e) => console.error('[status-email]', e.message));
+  pushOrderStatus(order);
   res.json({ order });
 });
 
@@ -99,6 +102,7 @@ router.post('/orders/:id/deliver', protect, riderOnly, async (req, res) => {
   if (order.paymentMethod === 'cod') order.paymentStatus = 'paid'; // cash collected by the rider
   await order.save();
   sendStatusEmail(order).catch((e) => console.error('[status-email]', e.message));
+  pushOrderStatus(order);
   res.json({ order });
 });
 
