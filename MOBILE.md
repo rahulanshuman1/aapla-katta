@@ -115,3 +115,24 @@ The app contains a **bundled copy** of the website. When you change code: `cd fr
 - Never commit your keystore, `.p8` or Firebase service-account file.
 - `CLIENT_URL` on Render does **not** need changing – the backend automatically accepts the apps' internal origins (`https://localhost`, `capacitor://localhost`).
 - The Privacy Policy and Terms pages are sensible defaults written for this app; please have them reviewed for your business (e.g. refund wording) before launch.
+
+---
+
+## 8. Automatic Android APK on every deployment (GitHub Actions)
+
+`.github/workflows/android-apk.yml` builds the Android app **every time you push to `main`** (the same push that deploys Vercel and Render) – nothing to install on your computer.
+
+**Get the APK:** GitHub → your repo → **Actions** → latest "Build Android APK" run → **Artifacts** → download the zip, *or* GitHub → **Releases** (a permanent link per build, e.g. "Android build 7"). Open the `AaplaKatta-debug.apk` on your phone (allow "install unknown apps" once) – or share the Release link with your riders.
+
+**Optional GitHub settings** (repo → Settings → Secrets and variables → Actions):
+
+| Name | Type | What it is |
+|---|---|---|
+| `VITE_API_URL` | Variable | your Render backend URL (defaults to `https://aapla-katta.onrender.com`) |
+| `GOOGLE_SERVICES_JSON` | Secret | base64 of Firebase `google-services.json` (`base64 -w0 google-services.json`) – needed for push notifications |
+| `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` | Secrets | your upload keystore (base64 of the `.jks` file). When present, the build also produces a **signed release APK** and the **signed `.aab` for Google Play** |
+
+Without the keystore secrets you get the **debug APK**, which installs fine on phones for testing and for riders, but **cannot be uploaded to Google Play** – use the `.aab` from a keystore-signed build for that. Create the keystore once (keep it safe forever):
+`keytool -genkey -v -keystore aapla-katta.jks -keyalg RSA -keysize 2048 -validity 10000 -alias aaplakatta`
+
+The version number is the GitHub build number, so every build installs over the previous one. iOS cannot be built this way without a paid Mac runner and Apple certificates.
