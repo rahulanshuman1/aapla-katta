@@ -73,6 +73,7 @@ function orderTable(s, order) {
   const line = (l, v, bold) => `<tr><td style="padding:5px 0;${bold ? 'font-weight:800;font-size:17px;color:' + s.theme.colors.primary : ''}">${l}</td><td style="padding:5px 0;text-align:right;${bold ? 'font-weight:800;font-size:17px;color:' + s.theme.colors.primary : ''}">${v}</td></tr>`;
   return `<table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${rows}
     ${line('Subtotal', inr(order.subtotal))}
+    ${order.discount ? line(`Coupon ${esc(order.couponCode)}${order.couponPercent ? ` (${order.couponPercent}% off)` : ''}`, '−' + inr(order.discount)) : ''}
     ${order.gst ? line('GST', inr(order.gst)) : ''}
     ${order.deliveryFee ? line('Delivery fee', inr(order.deliveryFee)) : ''}
     ${line('Total', inr(order.total), true)}</table>`;

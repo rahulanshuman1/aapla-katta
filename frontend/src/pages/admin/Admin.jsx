@@ -6,11 +6,13 @@ import AdminMenu from './AdminMenu';
 import AdminDelivery from './AdminDelivery';
 import AdminAppearance from './AdminAppearance';
 import { AdminContent, AdminBusiness } from './AdminSite';
+import AdminCoupons from './AdminCoupons';
 
 const TABS = [
   ['orders', '📦 Orders'],
   ['delivery', '🛵 Delivery team'],
   ['menu', '🍽️ Menu & prices'],
+  ['coupons', '🎟️ Coupons'],
   ['appearance', '🎨 Theme & logo'],
   ['content', '✏️ Website text'],
   ['business', '🏪 Contact & settings'],
@@ -42,6 +44,7 @@ export default function Admin() {
         {tab === 'orders' && <AdminOrders />}
         {tab === 'delivery' && <AdminDelivery />}
         {tab === 'menu' && <AdminMenu />}
+        {tab === 'coupons' && <AdminCoupons />}
         {tab === 'appearance' && <AdminAppearance />}
         {tab === 'content' && <AdminContent />}
         {tab === 'business' && <AdminBusiness />}

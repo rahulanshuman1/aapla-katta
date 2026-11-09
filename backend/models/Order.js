@@ -20,6 +20,10 @@ const orderSchema = new mongoose.Schema(
     phone: String,
     items: [lineSchema],
     subtotal: Number,
+    discount: { type: Number, default: 0 },          // ₹ taken off the items by a coupon
+    couponCode: { type: String, default: '' },
+    couponPercent: { type: Number, default: 0 },
+    couponReleased: { type: Boolean, default: false }, // coupon use given back after a cancellation
     gst: { type: Number, default: 0 },
     deliveryFee: { type: Number, default: 0 },
     total: Number,

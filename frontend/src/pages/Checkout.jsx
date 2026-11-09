@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api, inr } from '../api';
@@ -56,14 +56,38 @@ export default function Checkout() {
   const [f, setF] = useState({ phone: user.phone || '', orderType: 'dine-in', tableNo: '', address: user.address || '', notes: '', location: null, paymentMethod: meta.razorpayEnabled ? 'online' : 'cod' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [cInput, setCInput] = useState('');
+  const [coupon, setCoupon] = useState(null); // { code, percent, discount } – confirmed by the server
+  const [cBusy, setCBusy] = useState(false);
+  const [cErr, setCErr] = useState('');
+  const lastChecked = useRef(null);
   const [snap, setSnap] = useState(null); // frozen copy of the cart once the order is placed (cart itself is cleared)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
   const lines = snap ? snap.lines : cart;
   const subtotal = snap ? snap.subtotal : cartTotal;
-  const gst = Math.round((subtotal * ch.gstPercent) / 100);
+  const discount = snap ? snap.discount : coupon ? coupon.discount : 0;
+  const gst = Math.round(((subtotal - discount) * ch.gstPercent) / 100);
   const delivery = f.orderType === 'delivery' ? Number(ch.deliveryFee) || 0 : 0;
-  const total = subtotal + gst + delivery;
+  const total = subtotal - discount + gst + delivery;
+
+  const applyCoupon = async () => {
+    if (!cInput.trim() || cBusy) return;
+    setCBusy(true); setCErr('');
+    try {
+      const d = await api.post('/coupons/validate', { code: cInput, subtotal: cartTotal });
+      lastChecked.current = cartTotal; setCoupon({ code: d.code, percent: d.percent, discount: d.discount }); setCInput(''); toast(d.message);
+    } catch (e) { setCoupon(null); setCErr(e.message); } finally { setCBusy(false); }
+  };
+  const removeCoupon = () => { setCoupon(null); setCErr(''); lastChecked.current = null; };
+  // the cart changed (quantities) -> re-check so the discount, minimum order etc. stay correct
+  useEffect(() => {
+    if (!coupon || snap || lastChecked.current === cartTotal) return;
+    lastChecked.current = cartTotal;
+    api.post('/coupons/validate', { code: coupon.code, subtotal: cartTotal })
+      .then((d) => setCoupon({ code: d.code, percent: d.percent, discount: d.discount }))
+      .catch((e) => { setCoupon(null); setCErr(`${coupon.code} removed: ${e.message}`); });
+  }, [cartTotal]); // eslint-disable-line
 
   if (!cart.length && !snap) {
     return <div className="container narrow center page-pad"><div className="empty-emoji">🛒</div><h2>Your cart is empty</h2><Link to="/menu" className="btn btn-primary" style={{ marginTop: 16 }}>Browse the menu</Link></div>;
@@ -77,9 +101,9 @@ export default function Checkout() {
     setBusy(true);
     try {
       const { location, ...fields } = f;
-      const d = await api.post('/orders', { ...fields, deliveryLocation: f.orderType === 'delivery' ? location : undefined, items: cart.map((l) => ({ itemId: l.itemId, variant: l.variant, qty: l.qty })) });
+      const d = await api.post('/orders', { ...fields, deliveryLocation: f.orderType === 'delivery' ? location : undefined, coupon: coupon ? coupon.code : undefined, items: cart.map((l) => ({ itemId: l.itemId, variant: l.variant, qty: l.qty })) });
       // The order now exists on the server – empty the cart right away so it can never be re-submitted or left behind
-      setSnap({ lines: cart, subtotal: cartTotal });
+      setSnap({ lines: cart, subtotal: cartTotal, discount });
       clearCart();
       if (f.paymentMethod === 'online') {
         try {
@@ -91,6 +115,7 @@ export default function Checkout() {
       }
       nav('/orders', { state: { placed: d.order.orderNo, trackingId: d.order.trackingId } });
     } catch (e2) {
+      if (/coupon/i.test(e2.message)) { setCoupon(null); setCErr(e2.message); } // the server refused the coupon – nothing was ordered, cart is untouched
       setErr(e2.message);
     } finally { setBusy(false); }
   };
@@ -142,7 +167,17 @@ export default function Checkout() {
             </div>
           ))}
           <hr />
+          {!snap && (coupon ? (
+            <div className="coupon-applied"><span>🎟️ <b>{coupon.code}</b> applied – {coupon.percent}% off</span><button type="button" className="link-btn" onClick={removeCoupon}>Remove</button></div>
+          ) : (
+            <div className="coupon-box">
+              <input value={cInput} onChange={(e) => { setCInput(e.target.value.toUpperCase().replace(/\s/g, '')); setCErr(''); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }} placeholder="Have a coupon code?" autoCapitalize="characters" autoComplete="off" maxLength={20} aria-label="Coupon code" />
+              <button type="button" className="btn btn-outline btn-sm" disabled={!cInput.trim() || cBusy} onClick={applyCoupon}>{cBusy ? '…' : 'Apply'}</button>
+            </div>
+          ))}
+          {cErr && <small className="coupon-err">{cErr}</small>}
           <div className="row"><span>Subtotal</span><span>{inr(subtotal)}</span></div>
+          {discount > 0 && <div className="row discount"><span>Coupon discount{!snap && coupon ? ` (${coupon.code})` : ''}</span><span>−{inr(discount)}</span></div>}
           {gst > 0 && <div className="row"><span>GST ({ch.gstPercent}%)</span><span>{inr(gst)}</span></div>}
           {delivery > 0 && <div className="row"><span>Delivery fee</span><span>{inr(delivery)}</span></div>}
           <div className="row total"><span>Total</span><span>{inr(total)}</span></div>

@@ -19,11 +19,17 @@ const ll = (p) => (p && Number.isFinite(p.lat) && Number.isFinite(p.lng) ? { lat
 function LiveMap({ o, now, origin }) {
   const rider = ll(o.delivery?.location);
   const dest = ll(o.deliveryLocation);
-  const road = useRoute(rider, dest);
-  if (!rider) return <div className="map-wait"><div className="spinner" /><p>Waiting for your delivery partner's live location…</p></div>;
+  const road = useRoute(rider || origin, dest);
+  if (!rider && !dest) return <div className="map-wait"><div className="spinner" /><p>Waiting for your delivery partner's live location…</p></div>;
+  if (!rider) return (
+    <div className="map-card" style={{ marginTop: 12 }}>
+      <MapView dest={dest} origin={origin} route={road?.coords} height={280} />
+      <div className="eta-row"><div><b>{road ? `≈ ${road.minutes} min` : 'On the way'}</b><small>Waiting for your delivery partner's live location…</small></div></div>
+    </div>
+  );
   const dist = road ? road.km : dest ? km(rider, dest) : null;
   const eta = road ? road.minutes : dist != null ? Math.max(1, Math.round((dist / 18) * 60)) : null;
-  const stale = o.delivery.location.at ? now - new Date(o.delivery.location.at).getTime() : 0;
+  const stale = o.delivery?.location?.at ? now - new Date(o.delivery.location.at).getTime() : 0;
   return (
     <div className="map-card" style={{ marginTop: 12 }}>
       <MapView rider={rider} dest={dest} origin={origin} route={road?.coords} height={280} />
@@ -85,6 +91,7 @@ export default function MyOrders() {
             </div>
             <ul className="order-items">
               {o.items.map((i, n) => <li key={n}><span>{i.qty} × {i.name}{i.variant && ` (${i.variant})`}</span><span>{inr(i.price * i.qty)}</span></li>)}
+              {o.discount > 0 && <li className="coupon-line"><span>🎟️ Coupon {o.couponCode}{o.couponPercent ? ` (${o.couponPercent}% off)` : ''}</span><span>−{inr(o.discount)}</span></li>}
             </ul>
             <div className="order-foot">
               <span className="muted">{o.orderType} · {o.paymentMethod === 'online' ? (o.paymentStatus === 'paid' ? 'Paid online ✓' : 'Payment pending') : 'Pay at restaurant'}</span>

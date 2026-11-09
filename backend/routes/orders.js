@@ -8,6 +8,7 @@ const { getSettings } = require('../utils/settings');
 const { genTrackingId, validLatLng } = require('../utils/geo');
 const { sendOrderEmails, sendStatusEmail } = require('../utils/emailTemplates');
 const { pushNewOrder, pushOrderStatus } = require('../utils/push');
+const { evaluateCoupon, reserveUse, releaseUse, CouponError } = require('../utils/coupons');
 
 let rzp;
 const razorpay = () => {
@@ -43,7 +44,7 @@ router.post('/', protect, async (req, res) => {
     const s = await getSettings();
     if (!s.charges.acceptingOrders) return res.status(400).json({ message: 'Sorry, we are not accepting online orders right now.' });
 
-    const { items, orderType = 'dine-in', tableNo = '', address = '', phone, notes = '', paymentMethod = 'online', deliveryLocation } = req.body;
+    const { items, orderType = 'dine-in', tableNo = '', address = '', phone, notes = '', paymentMethod = 'online', deliveryLocation, coupon: couponCode } = req.body;
     if (!Array.isArray(items) || !items.length) return res.status(400).json({ message: 'Your cart is empty' });
     if (!phone || String(phone).replace(/\D/g, '').length < 10) return res.status(400).json({ message: 'Enter a valid phone number' });
     if (orderType === 'delivery' && !address.trim()) return res.status(400).json({ message: 'Delivery address is required' });
@@ -66,12 +67,25 @@ router.post('/', protect, async (req, res) => {
     }
     const subtotal = lines.reduce((a, l) => a + l.price * l.qty, 0);
     if (subtotal < s.charges.minOrder) return res.status(400).json({ message: `Minimum order is ₹${s.charges.minOrder}` });
-    const gst = Math.round((subtotal * s.charges.gstPercent) / 100);
+    // Coupon: re-checked here on the server; discount comes off the items, GST is charged on the discounted amount
+    let discount = 0, couponDoc = null;
+    if (couponCode && String(couponCode).trim()) {
+      try {
+        const r = await evaluateCoupon(couponCode, subtotal, req.user._id);
+        couponDoc = r.coupon; discount = r.discount;
+      } catch (e) {
+        if (e instanceof CouponError) return res.status(400).json({ message: e.message, couponInvalid: true });
+        throw e;
+      }
+    }
+    const gst = Math.round(((subtotal - discount) * s.charges.gstPercent) / 100);
     const deliveryFee = orderType === 'delivery' ? Number(s.charges.deliveryFee) || 0 : 0;
+    if (couponDoc && !(await reserveUse(couponDoc))) return res.status(400).json({ message: 'This coupon has been fully redeemed', couponInvalid: true });
 
     const order = await Order.create({
       orderNo: orderNo(), user: req.user._id, customerName: req.user.name, customerEmail: req.user.email, phone,
-      items: lines, subtotal, gst, deliveryFee, total: subtotal + gst + deliveryFee,
+      items: lines, subtotal, discount, couponCode: couponDoc ? couponDoc.code : '', couponPercent: couponDoc ? couponDoc.percent : 0,
+      gst, deliveryFee, total: subtotal - discount + gst + deliveryFee,
       orderType, tableNo, address, notes, paymentMethod,
       // Delivery orders get a live-tracking ID the moment they are created
       trackingId: orderType === 'delivery' ? genTrackingId() : undefined,
@@ -165,6 +179,7 @@ router.put('/:id/status', protect, adminOnly, async (req, res) => {
   if (status === 'completed' && order.orderType === 'delivery') order.delivery.deliveredAt = order.delivery.deliveredAt || new Date();
   if (status === 'completed' && order.paymentMethod === 'cod') order.paymentStatus = 'paid';
   await order.save();
+  if (status === 'cancelled') await releaseUse(order); // give the coupon use back
   sendStatusEmail(order);
   pushOrderStatus(order); // mobile push (no-op unless Firebase is configured)
   res.json({ order });

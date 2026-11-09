@@ -70,6 +70,7 @@ export default function AdminOrders() {
               </p>
               <ul className="order-items">
                 {o.items.map((i, n) => <li key={n}><span>{i.qty} × {i.name}{i.variant && ` (${i.variant})`}</span><span>{inr(i.price * i.qty)}</span></li>)}
+                {o.discount > 0 && <li className="coupon-line"><span>🎟️ Coupon {o.couponCode}{o.couponPercent ? ` (${o.couponPercent}% off)` : ''}</span><span>−{inr(o.discount)}</span></li>}
               </ul>
               {o.notes && <p className="note-box">📝 {o.notes}</p>}
 
