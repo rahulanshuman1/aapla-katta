@@ -29,7 +29,7 @@ export async function payWithRazorpay({ payment, order, user, settings }) {
       name: settings.brand.name,
       description: `Order ${order.orderNo}`,
       order_id: payment.razorpayOrderId,
-      prefill: { name: user.name, email: user.email, contact: order.phone },
+      prefill: { name: user.name, email: user.email || undefined, contact: order.phone },
       notes: { orderNo: order.orderNo },
       theme: { color: getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#C8102E' },
       modal: { ondismiss: () => done(reject, Object.assign(new Error('Payment cancelled'), { dismissed: true })) },
@@ -185,7 +185,7 @@ export default function Checkout() {
           <button className="btn btn-primary btn-block btn-lg" disabled={busy || !f.paymentMethod}>
             {busy ? 'Please wait…' : f.paymentMethod === 'online' ? `Pay ${inr(total)}` : 'Place order'}
           </button>
-          <small className="muted">Orders once placed cannot be cancelled. A confirmation will be emailed to {user.email}.</small>
+          <small className="muted">Orders once placed cannot be cancelled. {user.email ? `A confirmation will be emailed to ${user.email}.` : 'You can follow your order under My orders.'}</small>
         </motion.div>
       </form>
     </div>

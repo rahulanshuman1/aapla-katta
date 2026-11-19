@@ -4,6 +4,11 @@ const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const { sign, protect } = require('../middleware/auth');
 const { sendVerificationEmail, sendWelcomeEmail, sendResetEmail } = require('../utils/emailTemplates');
+const jwt = require('jsonwebtoken');
+const { getSettings } = require('../utils/settings');
+const { normalizePhone, maskPhone } = require('../utils/phone');
+const { requestOtp, verifyOtp, OtpError } = require('../utils/otp');
+const { smsEnabled } = require('../utils/sms');
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false });
 const sha = (t) => crypto.createHash('sha256').update(t).digest('hex');
@@ -66,6 +71,58 @@ router.post('/login', limiter, async (req, res) => {
   res.json({ token: sign(user), user: user.toPublic() });
 });
 
+// ---------- Mobile OTP sign-in / sign-up ----------
+const otpSendLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 12, standardHeaders: true, legacyHeaders: false, message: { message: 'Too many requests. Please try again in a few minutes.' } });
+const otpVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { message: 'Too many attempts. Please try again in a few minutes.' } });
+const otpFail = (res, e) => (e instanceof OtpError ? res.status(e.status).json({ message: e.message, retryAfter: e.retryAfter }) : null);
+
+// 1) text a 6-digit code
+router.post('/otp/send', otpSendLimiter, async (req, res) => {
+  if (!smsEnabled()) return res.status(503).json({ message: 'Mobile OTP sign-in is not available right now. Please use email and password.' });
+  const phone = normalizePhone(req.body.phone);
+  if (!phone) return res.status(400).json({ message: 'Enter a valid 10-digit Indian mobile number.' });
+  try {
+    const s = await getSettings();
+    await requestOtp(phone, s.brand.name || 'Aapla Katta');
+    res.json({ ok: true, resendIn: 30, message: `We sent a 6-digit code to ${maskPhone(phone)}` });
+  } catch (e) {
+    if (otpFail(res, e)) return;
+    console.error('[otp] SMS failed:', e.message); // the real reason is in the server log
+    res.status(502).json({ message: 'We could not send the SMS right now. Please try again in a moment or sign in with your email.' });
+  }
+});
+
+// 2) check the code → signed in (existing customer) or a short-lived ticket to finish sign-up (new customer)
+router.post('/otp/verify', otpVerifyLimiter, async (req, res) => {
+  const phone = normalizePhone(req.body.phone);
+  if (!phone) return res.status(400).json({ message: 'Enter a valid mobile number.' });
+  try { await verifyOtp(phone, req.body.code); } catch (e) { if (otpFail(res, e)) return; throw e; }
+
+  const found = await User.find({ phoneNorm: phone }).sort({ createdAt: 1 });
+  const customers = found.filter((u) => u.role === 'customer');
+  const user = customers.find((u) => u.emailVerified) || customers[0];
+  if (!user && found.length) return res.status(403).json({ message: 'This number belongs to a staff account. Please sign in with your email and password.' });
+  if (user) {
+    if (!user.phoneVerified) { user.phoneVerified = true; await user.save(); }
+    return res.json({ token: sign(user), user: user.toPublic() });
+  }
+  const ticket = jwt.sign({ purpose: 'otp-signup', phone }, process.env.JWT_SECRET, { expiresIn: '10m' });
+  res.json({ newUser: true, ticket });
+});
+
+// 3) new customer: choose a name → account created
+router.post('/otp/complete', otpVerifyLimiter, async (req, res) => {
+  let payload;
+  try { payload = jwt.verify(String(req.body.ticket || ''), process.env.JWT_SECRET); } catch { return res.status(400).json({ message: 'Your session expired. Please start again.' }); }
+  if (payload.purpose !== 'otp-signup' || !payload.phone) return res.status(400).json({ message: 'Invalid request.' });
+  const name = String(req.body.name || '').trim();
+  if (name.length < 2 || name.length > 80) return res.status(400).json({ message: 'Please enter your name.' });
+  const existing = await User.findOne({ phoneNorm: payload.phone, role: 'customer' });
+  if (existing) return res.json({ token: sign(existing), user: existing.toPublic() });
+  const user = await User.create({ name, phone: payload.phone, phoneVerified: true, hasPassword: false });
+  res.status(201).json({ token: sign(user), user: user.toPublic() });
+});
+
 router.post('/forgot-password', limiter, async (req, res) => {
   const user = await User.findOne({ email: (req.body.email || '').toLowerCase() });
   if (user) {
@@ -94,7 +151,10 @@ router.get('/me', protect, (req, res) => res.json({ user: req.user.toPublic() })
 router.put('/me', protect, async (req, res) => {
   const { name, phone, address } = req.body;
   if (name) req.user.name = name;
-  if (phone !== undefined) req.user.phone = phone;
+  if (phone !== undefined && !(req.user.phoneVerified && req.user.hasPassword === false)) { // an OTP-only account's number is its identity
+    if (normalizePhone(phone) !== req.user.phoneNorm) req.user.phoneVerified = false;
+    req.user.phone = phone;
+  }
   if (address !== undefined) req.user.address = address;
   await req.user.save();
   res.json({ user: req.user.toPublic() });
@@ -122,8 +182,12 @@ router.delete('/push-token', protect, async (req, res) => {
 router.delete('/me', protect, async (req, res) => {
   const Order = require('../models/Order');
   if (req.user.role === 'admin') return res.status(403).json({ message: 'The owner (admin) account cannot be deleted here.' });
-  const withHash = await User.findById(req.user._id).select('+passwordHash');
-  if (!req.body.password || !(await withHash.comparePassword(String(req.body.password)))) return res.status(400).json({ message: 'Password is incorrect' });
+  if (req.user.hasPassword === false) { // mobile-OTP account: no password to confirm with
+    if (req.body.confirm !== 'DELETE') return res.status(400).json({ message: 'Type DELETE to confirm' });
+  } else {
+    const withHash = await User.findById(req.user._id).select('+passwordHash');
+    if (!req.body.password || !(await withHash.comparePassword(String(req.body.password)))) return res.status(400).json({ message: 'Password is incorrect' });
+  }
   const ACTIVE = ['placed', 'confirmed', 'preparing', 'ready', 'out-for-delivery'];
   const open = await Order.countDocuments({ $or: [{ user: req.user._id }, { 'delivery.partner': req.user._id }], status: { $in: ACTIVE } });
   if (open) return res.status(400).json({ message: 'You have an order in progress. Please try again once it is completed.' });

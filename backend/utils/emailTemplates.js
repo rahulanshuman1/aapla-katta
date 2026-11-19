@@ -27,6 +27,8 @@ function layout(s, title, body) {
 const button = (s, href, label) =>
   `<p style="text-align:center;margin:26px 0"><a href="${href}" style="background:${s.theme.colors.primary};color:#fff;text-decoration:none;padding:13px 30px;border-radius:999px;font-weight:700;display:inline-block">${label}</a></p>`;
 
+const { orderSms } = require('./orderSms');
+
 async function sendVerificationEmail(user, token) {
   const s = await getSettings();
   const link = `${process.env.CLIENT_URL.split(',')[0].trim()}/verify-email?token=${token}`;
@@ -82,6 +84,7 @@ function orderTable(s, order) {
 const typeLabel = { 'dine-in': 'Dine-in', takeaway: 'Takeaway', delivery: 'Home delivery' };
 
 async function sendOrderEmails(order) {
+  orderSms(order, 'placed'); // phone-only customers get an SMS instead (no-op when they have an email)
   const s = await getSettings();
   const base = process.env.CLIENT_URL.split(',')[0].trim();
   const pay = order.paymentMethod === 'online'
@@ -120,6 +123,7 @@ async function sendOrderEmails(order) {
 }
 
 async function sendStatusEmail(order) {
+  orderSms(order, 'status');
   const s = await getSettings();
   const base = process.env.CLIENT_URL.split(',')[0].trim();
   const delivery = order.orderType === 'delivery';
@@ -143,6 +147,7 @@ async function sendStatusEmail(order) {
 }
 
 async function sendAssignedEmail(order) {
+  orderSms(order, 'assigned');
   const s = await getSettings();
   const base = process.env.CLIENT_URL.split(',')[0].trim();
   await sendMail({

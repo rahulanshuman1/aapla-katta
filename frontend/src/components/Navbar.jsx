@@ -57,7 +57,7 @@ export default function Navbar() {
               <AnimatePresence>
                 {menuOpen && (
                   <motion.div className="dropdown" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                    <div className="dropdown-head"><b>{user.name}</b><small>{user.email}</small></div>
+                    <div className="dropdown-head"><b>{user.name}</b><small>{user.email || user.phone}</small></div>
                     {isDelivery ? <Link to="/delivery" onClick={close}>🛵 My deliveries</Link> : <Link to="/orders" onClick={close}>📦 My orders</Link>}
                     <Link to="/account" onClick={close}>👤 My account</Link>
                     {isAdmin && <Link to="/admin" onClick={close}>⚙️ Admin panel</Link>}

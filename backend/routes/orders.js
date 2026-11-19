@@ -40,7 +40,7 @@ async function createGatewayOrder(order) {
 // Create order – prices are always re-calculated on the server
 router.post('/', protect, async (req, res) => {
   try {
-    if (!req.user.emailVerified) return res.status(403).json({ message: 'Please verify your email first' });
+    if (!req.user.emailVerified && !req.user.phoneVerified) return res.status(403).json({ message: 'Please verify your email first' });
     const s = await getSettings();
     if (!s.charges.acceptingOrders) return res.status(400).json({ message: 'Sorry, we are not accepting online orders right now.' });
 

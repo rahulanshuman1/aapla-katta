@@ -19,8 +19,79 @@ function Shell({ title, sub, children }) {
   );
 }
 
+/** Mobile number → 6-digit SMS code → (new customers) name. Used on the Sign in page. */
+function OtpLogin({ onDone }) {
+  const [step, setStep] = useState('phone'); // phone | code | name
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [ticket, setTicket] = useState('');
+  const [wait, setWait] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => { if (wait <= 0) return undefined; const t = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(t); }, [wait]);
+
+  const send = async (e) => {
+    e?.preventDefault(); setBusy(true); setErr('');
+    try { const d = await api.post('/auth/otp/send', { phone }); setStep('code'); setCode(''); setWait(d.resendIn || 30); }
+    catch (e2) { setErr(e2.message); if (e2.data?.retryAfter) setWait(e2.data.retryAfter); }
+    finally { setBusy(false); }
+  };
+  const verify = async (e) => {
+    e.preventDefault(); setBusy(true); setErr('');
+    try {
+      const d = await api.post('/auth/otp/verify', { phone, code });
+      if (d.newUser) { setTicket(d.ticket); setStep('name'); } else onDone(d);
+    } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+  const finish = async (e) => {
+    e.preventDefault(); setBusy(true); setErr('');
+    try { onDone(await api.post('/auth/otp/complete', { ticket, name })); }
+    catch (e2) { setErr(e2.message); } finally { setBusy(false); }
+  };
+
+  if (step === 'name') {
+    return (
+      <form onSubmit={finish}>
+        <p className="alert ok">✅ Number verified. Just one more thing:</p>
+        <label>Your name<input required autoFocus autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} /></label>
+        {err && <p className="alert err">{err}</p>}
+        <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Creating…' : 'Continue'}</button>
+      </form>
+    );
+  }
+  if (step === 'code') {
+    return (
+      <form onSubmit={verify}>
+        <p className="muted" style={{ marginTop: 0 }}>Enter the 6-digit code we sent to <b>+91 {phone.replace(/\D/g, '').slice(-10)}</b>.</p>
+        <label>SMS code<input className="otp-input" required autoFocus inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} /></label>
+        {err && <p className="alert err">{err}</p>}
+        <button className="btn btn-primary btn-block" disabled={busy || code.length !== 6}>{busy ? 'Checking…' : 'Verify & continue'}</button>
+        <p className="auth-links">
+          <button type="button" className="link-btn" onClick={() => { setStep('phone'); setErr(''); }}>Change number</button>
+          <button type="button" className="link-btn" disabled={wait > 0 || busy} onClick={send}>{wait > 0 ? `Resend in ${wait}s` : 'Resend code'}</button>
+        </p>
+      </form>
+    );
+  }
+  return (
+    <form onSubmit={send}>
+      <label>Mobile number
+        <div className="phone-field"><span>+91</span><input type="tel" required autoFocus inputMode="numeric" autoComplete="tel-national" placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+      </label>
+      <p className="muted small" style={{ margin: '0 0 10px' }}>New here? We'll create your account after you verify the code.</p>
+      {err && <p className="alert err">{err}</p>}
+      <button className="btn btn-primary btn-block" disabled={busy || wait > 0}>{busy ? 'Sending…' : wait > 0 ? `Wait ${wait}s` : 'Send OTP'}</button>
+    </form>
+  );
+}
+
 export function Login() {
-  const { setAuth, toast } = useApp();
+  const { setAuth, toast, meta } = useApp();
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem('ak_login_mode') === 'email' ? 'email' : 'otp'; } catch { return 'otp'; } });
+  const useOtp = meta.otpEnabled && mode === 'otp';
+  const pick = (m) => { setMode(m); try { localStorage.setItem('ak_login_mode', m); } catch { /* ignore */ } };
   const [p] = useSearchParams();
   const nav = useNavigate();
   const [f, setF] = useState({ email: '', password: '' });
@@ -41,9 +112,21 @@ export function Login() {
     } finally { setBusy(false); }
   };
   const resend = async () => { await api.post('/auth/resend-verification', { email: f.email }); toast('Verification email sent again 📧'); };
+  const otpDone = (d) => {
+    setAuth(d.token, d.user);
+    toast(`Welcome, ${d.user.name.split(' ')[0]}!`);
+    nav(p.get('next') || (d.user.role === 'admin' ? '/admin' : d.user.role === 'delivery' ? '/delivery' : '/menu'), { replace: true });
+  };
 
   return (
     <Shell title="Sign in" sub="Welcome back! Sign in to order and track your food.">
+      {meta.otpEnabled && (
+        <div className="auth-tabs" role="tablist">
+          <button type="button" role="tab" aria-selected={useOtp} className={useOtp ? 'on' : ''} onClick={() => pick('otp')}>📱 Mobile OTP</button>
+          <button type="button" role="tab" aria-selected={!useOtp} className={!useOtp ? 'on' : ''} onClick={() => pick('email')}>✉️ Email</button>
+        </div>
+      )}
+      {useOtp ? <OtpLogin onDone={otpDone} /> : (
       <form onSubmit={submit}>
         <label>Email<input type="email" required autoComplete="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <label>Password<PasswordInput required autoComplete="current-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></label>
@@ -51,7 +134,8 @@ export function Login() {
         {unverified && <button type="button" className="link-btn" onClick={resend}>Resend verification email</button>}
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>
-      <p className="auth-links"><Link to="/forgot-password">Forgot password?</Link><span>New here? <Link to={`/register${p.get('next') ? `?next=${p.get('next')}` : ''}`}>Create an account</Link></span></p>
+      )}
+      <p className="auth-links">{useOtp ? <span /> : <Link to="/forgot-password">Forgot password?</Link>}<span>New here? <Link to={`/register${p.get('next') ? `?next=${p.get('next')}` : ''}`}>Create an account</Link></span></p>
     </Shell>
   );
 }
@@ -61,7 +145,7 @@ export function Register() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
-  const { toast } = useApp();
+  const { toast, meta } = useApp();
 
   const submit = async (e) => {
     e.preventDefault(); setBusy(true); setErr('');
@@ -91,6 +175,7 @@ export function Register() {
         <button className="btn btn-primary btn-block" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
       </form>
       <p className="auth-links"><span>Already registered? <Link to="/login">Sign in</Link></span></p>
+      {meta.otpEnabled && <p className="muted small center" style={{ marginTop: 10 }}>Prefer no email or password? <Link to="/login">Sign in with your mobile number</Link> – we'll create your account.</p>}
     </Shell>
   );
 }

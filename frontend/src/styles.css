@@ -347,3 +347,10 @@ html.native .drawer-foot { padding-bottom: calc(18px + env(safe-area-inset-botto
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
   .fx { display: none; }
 }
+
+/* ---- mobile OTP sign-in ---- */
+.auth-tabs { display: flex; gap: 6px; background: var(--bg-soft, rgba(0,0,0,.05)); padding: 4px; border-radius: 14px; margin: 14px 0 16px; }
+.auth-tabs button { flex: 1; border: 0; background: transparent; padding: 10px 8px; border-radius: 10px; font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; color: inherit; opacity: .7; }
+.auth-tabs button.on { background: var(--surface); opacity: 1; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+.phone-field { display: flex; align-items: stretch; gap: 8px; margin-top: 6px; } .phone-field span { display: flex; align-items: center; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border, rgba(0,0,0,.15)); font-weight: 600; } .phone-field input { flex: 1; min-width: 0; margin: 0; }
+.otp-input { text-align: center; letter-spacing: .5em; font-size: 1.5rem; font-weight: 700; }

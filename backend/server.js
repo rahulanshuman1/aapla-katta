@@ -54,9 +54,24 @@ async function ensureAdmin() {
   }
 }
 
+// One-time, safe-to-repeat upgrade for mobile-OTP accounts: the old unique index on "email" must become "sparse"
+// (so several phone-only accounts without an email can exist), and existing users get a normalised phone for OTP look-ups.
+async function upgradeUsers() {
+  try {
+    const { normalizePhone } = require('./utils/phone');
+    const idx = await User.collection.indexes().catch(() => []);
+    const e = idx.find((i) => i.name === 'email_1');
+    if (e && !e.sparse) { await User.collection.dropIndex('email_1'); console.log('[db] email index replaced by a sparse one'); }
+    await User.createIndexes();
+    const todo = await User.find({ phone: { $nin: ['', null] }, phoneNorm: { $exists: false } }).select('phone');
+    for (const u of todo) { const n = normalizePhone(u.phone); if (n) await User.updateOne({ _id: u._id }, { phoneNorm: n }); }
+  } catch (err) { console.error('[db] user upgrade failed (mobile OTP sign-up may not work):', err.message); }
+}
+
 const PORT = process.env.PORT || 5000;
 connectDB()
   .then(async () => {
+    await upgradeUsers();
     await ensureAdmin();
     if ((await Category.countDocuments()) === 0) {
       console.log('Empty menu – seeding Aapla Katta menu…');

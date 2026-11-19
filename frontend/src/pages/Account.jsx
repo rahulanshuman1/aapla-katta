@@ -14,6 +14,7 @@ export default function Account() {
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const otpOnly = user.hasPassword === false; // signed up with a mobile OTP – no password
 
   const save = async (e) => {
     e.preventDefault(); setSaving(true);
@@ -24,7 +25,7 @@ export default function Account() {
   const del = async (e) => {
     e.preventDefault(); setBusy(true); setErr('');
     try {
-      await api.del('/auth/me', { password: pw });
+      await api.del('/auth/me', otpOnly ? { confirm: pw } : { password: pw });
       logout(); toast('Your account has been deleted.'); nav('/', { replace: true });
     } catch (e2) { setErr(e2.message); } finally { setBusy(false); }
   };
@@ -35,9 +36,9 @@ export default function Account() {
 
       <form className="card" onSubmit={save} style={{ marginBottom: 20 }}>
         <h3>Your details</h3>
-        <label>Email<input value={user.email} disabled /></label>
+        {user.email && <label>Email<input value={user.email} disabled /></label>}
         <label>Full name<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-        <label>Mobile number<input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
+        <label>Mobile number<input type="tel" value={f.phone} disabled={otpOnly} onChange={(e) => setF({ ...f, phone: e.target.value })} />{otpOnly && <small className="muted">This is the number you sign in with.</small>}</label>
         <label>Default delivery address<textarea rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></label>
         <button className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save details'}</button>
       </form>
@@ -46,10 +47,12 @@ export default function Account() {
         <form className="card danger-zone" onSubmit={del}>
           <h3>Delete my account</h3>
           <p className="muted">This permanently deletes your account and removes your name, phone number, address and saved locations from all your past orders. It cannot be undone.</p>
-          <label>Enter your password to confirm<PasswordInput required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
+          {otpOnly
+            ? <label>Type DELETE to confirm<input required value={pw} onChange={(e) => setPw(e.target.value.trim())} placeholder="DELETE" /></label>
+            : <label>Enter your password to confirm<PasswordInput required autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>}
           <label className="check"><input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} /> I understand this cannot be undone</label>
           {err && <p className="alert err">{err}</p>}
-          <button className="btn btn-outline" disabled={busy || !sure || !pw}>{busy ? 'Deleting…' : 'Delete my account'}</button>
+          <button className="btn btn-outline" disabled={busy || !sure || !pw || (otpOnly && pw !== 'DELETE')}>{busy ? 'Deleting…' : 'Delete my account'}</button>
         </form>
       )}
       {user.role !== 'customer' && <p className="muted small">Staff accounts (owner and delivery partners) are managed by the restaurant. Please contact the owner to remove one.</p>}

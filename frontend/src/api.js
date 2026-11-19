@@ -17,7 +17,7 @@ async function request(path, { method = 'GET', body } = {}) {
   } finally { clearTimeout(timer); }
   let data = {};
   try { data = await res.json(); } catch { /* empty body */ }
-  if (!res.ok) throw Object.assign(new Error(data.message || 'Something went wrong'), { status: res.status, code: data.code });
+  if (!res.ok) throw Object.assign(new Error(data.message || 'Something went wrong'), { status: res.status, code: data.code, data });
   return data;
 }
 

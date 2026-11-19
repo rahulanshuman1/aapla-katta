@@ -25,7 +25,7 @@ export function AppProvider({ children }) {
   const [draft, setDraft] = useState(null);          // unsaved appearance changes {theme, brand} – applied site-wide as a preview
   const [previewing, setPreviewing] = useState(false);
   const previewRef = useRef(false);
-  const [meta, setMeta] = useState({ razorpayEnabled: false, razorpayKeyId: '' });
+  const [meta, setMeta] = useState({ razorpayEnabled: false, razorpayKeyId: '', otpEnabled: false });
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(!getToken());

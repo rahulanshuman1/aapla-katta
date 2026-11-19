@@ -49,6 +49,12 @@ export function AdminBusiness() {
   const [charges, setCharges] = useState(settings.charges);
   const [busy, setBusy] = useState(false);
   const [mail, setMail] = useState(null);
+  const [sms, setSms] = useState(null);
+  const [smsTo, setSmsTo] = useState('');
+  const testSms = async () => {
+    setSms({ loading: true });
+    try { setSms(await api.post('/settings/test-sms', { phone: smsTo })); } catch (e) { setSms({ ok: false, error: e.message }); }
+  };
 
   const testEmail = async () => {
     setMail({ loading: true });
@@ -106,6 +112,18 @@ export function AdminBusiness() {
         {mail && !mail.loading && (mail.ok
           ? <p className="alert ok">✅ Sent via {mail.provider}. Check your inbox (and spam).</p>
           : <p className="alert err">❌ Email is NOT working{mail.provider ? ` (provider: ${mail.provider})` : ''}: {mail.error}</p>)}
+      </section>
+
+      <section className="card" style={{ marginBottom: 16 }}>
+        <h3>📱 SMS (mobile OTP) check</h3>
+        <p className="muted">Sends a test SMS so you can confirm mobile-OTP sign-in works. With a Twilio trial account the number must be verified in Twilio first.</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input type="tel" placeholder="10-digit mobile number" value={smsTo} onChange={(e) => setSmsTo(e.target.value)} style={{ flex: '1 1 180px' }} />
+          <button className="btn btn-outline btn-sm" onClick={testSms} disabled={sms?.loading || !smsTo}>{sms?.loading ? 'Sending…' : 'Send test SMS'}</button>
+        </div>
+        {sms && !sms.loading && (sms.ok
+          ? <p className="alert ok">✅ Sent via {sms.provider} to {sms.to}. {sms.provider === 'log' ? 'Test mode: the code is only printed in the server log.' : 'Check the phone.'}</p>
+          : <p className="alert err">❌ SMS is NOT working{sms.provider ? ` (provider: ${sms.provider})` : ''}: {sms.error}</p>)}
       </section>
       <div className="sticky-save"><button className="btn btn-primary btn-lg" disabled={busy} onClick={save}>{busy ? 'Saving…' : '💾 Save settings'}</button></div>
     </div>
